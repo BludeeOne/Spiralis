@@ -11,7 +11,7 @@ interface LivePanelProps {
   isListening: boolean;
 }
 
-const ARC_LEN = 408.4; // path length of the gauge arc below, in SVG units
+const ARC_LEN = 408.4; //path length of the gauge arc
 
 function needleOffset(cents: number): number {
   const clamped = Math.max(-50, Math.min(50, cents));

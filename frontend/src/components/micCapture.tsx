@@ -1,6 +1,6 @@
 // micCapture.tsx
-// Container: owns the pitch-detection session and renders the mic control
-// plus the LivePanel display. Drop <MicCapture /> anywhere in App.tsx.
+//auhtor: Erik Flores-sisemsen
+//Container:listens and reads audio to detect pitch.
 
 import { usePitchDetector } from '../hooks/usePitchDetector';
 import LivePanel from './livePanel';

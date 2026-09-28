@@ -1,3 +1,7 @@
+
+//auhtor: Erik Flores-sisemsen
+////description:
+
 import MicCapture from './components/micCapture';
 
 export default function App() {
