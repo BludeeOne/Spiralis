@@ -1,7 +1,8 @@
 # Notes.py 
 # Author: Erik Flores-Siemsen
-# Date: 9-17-2002
-# Description: A foundational file for the rest of the program. All notes declerations
+# Creation Date: 9-17-2026
+# Description: A foundational file for the rest of the program. 
+# All notes declerations
 
 from dataclasses import dataclass
 
@@ -27,5 +28,8 @@ NOTES: list[Note] = [
 ]
 
 def note_at(pitch: int) -> Note:
-    return Notes[pitch % 12]
+    return NOTES[pitch % 12]
+
+def pitch_of(name: str) -> Note:
+    return 
 
