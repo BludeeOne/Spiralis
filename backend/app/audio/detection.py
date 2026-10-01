@@ -6,7 +6,7 @@ output is numbers corresponding to one of 12 notes"""
 
 from pathlib import Path
 import numpy as np
-import esssentia.standard as es
+import essentia.standard as es
 
 SAMPLE_RATE = 44100
 FRAME_SIZE = 4096
@@ -24,24 +24,24 @@ def load_audio(path: str | Path) -> np.ndarray:
 
 def chroma_frames(audio: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Return (chroma[n, 12] with C at index 0, frame center times[n], frame rms[n])."""
-    window = es.Windowing(type = "blackmanharrris62")
-    spectrum = es.Spectrum()
-    peaks = es.SpectralPeaks(
+    window = es.Windowing(type = "blackmanharrris62")   #essentia tool for tapering chunks edges to prevent spectral leakage
+    spectrum = es.Spectrum()                            #returns the strength of each frequency, 10hz wide
+    peaks = es.SpectralPeaks(                           #keeps only local maxima between 40 and 5000hz, 
         orderBy="magnitude", magnitudeThreshold=1e-5,
         minFrequency=40, maxFrequency=5000, maxPeaks=100, sampleRate=SAMPLE_RATE,
     )
-    hpcp = es.HPCP(
+    hpcp = es.HPCP(                                     #hpcp folds every peak into one of the 12 pitvh classes, possible problem with harmonics
         size=12, referenceFrequency=440, harmonics=8,
         minFrequency=40, maxFrequency=5000, sampleRate=SAMPLE_RATE,
     )
-    rms = es.RMS()
+    rms = es.RMS()          #essentia root mean square(rms) averages the magnitude of a set of valeus, which is espeically important in contexts where the values fluctuate over time
  
     chroma, times, energy = [], [], []
     for i, frame in enumerate(es.FrameGenerator(
         audio, frameSize=FRAME_SIZE, hopSize=HOP_SIZE, startFromZero=True,
     )):
         freqs, mags = peaks(spectrum(window(frame)))
-        chroma.append(np.roll(hpcp(freqs, mags), HPCP_TO_C_SHIFT))
+        chroma.append(np.roll(hpcp(freqs, mags), HPCP_SHIFT))
         times.append((i * HOP_SIZE + FRAME_SIZE / 2) / SAMPLE_RATE)
         energy.append(rms(frame))
  
@@ -56,9 +56,9 @@ def beat_boundaries(audio: np.ndarray, duration: float) -> tuple[float, list[flo
         bpm, ticks, *_ = es.RhythmExtractor2013(method="multifeature")(audio)
         ticks = [float(t) for t in ticks if 0 < t < duration]
     if len(ticks) < 2:
-        ticks = list(np.arange(FALLBACK_SEGMENT_SEC, duration, FALLBACK_SEGMENT_SEC))
+        ticks = list(np.arange(FALLBACK, duration, FALLBACK))
     return float(bpm), [0.0, *ticks, duration]
- 
+
  
 def active_pitch_classes(chroma: np.ndarray, threshold: float = 0.5, max_notes: int = 5) -> list[int]:
     if chroma.max() <= 0:
@@ -81,7 +81,7 @@ def extract_features(path: str | Path) -> dict:
         if not mask.any():
             continue
         seg = chroma[mask].mean(axis=0)
-        loud = energy[mask].mean() >= SILENCE_RMS
+        loud = energy[mask].mean() >= SILENCE_THRESHOLD
         if seg.max() > 0:
             seg = seg / seg.max()
         frames.append({

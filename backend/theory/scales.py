@@ -15,4 +15,5 @@ Scale_Intervals = {
     "mixolydian":       [2, 2, 1, 2, 2, 1, 2],
 }
 
-def get_scale(root:str, scale_type: str = )
+def get_scale(root:str, scale_type: str = "major"  ): 
+    pass

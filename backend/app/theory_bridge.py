@@ -18,7 +18,7 @@ def analyze(frames: list[list[int]], key_hint: str | None = None) -> TheoryResul
     Rough shape once the engine exists:
         chords      = [identify_chord(set(f)) for f in frames if f]
         chords      = collapse consecutive duplicates (beats -> chord changes)
-        key         = detect_key(chords)          # key_hint = Essentia's guess, cross-check only
+        key         = detect_key(chords)          
         progression = to_roman_numerals(chords, key)
         scales      = scales_for_key(key)
         related     = circle_neighbors(key)

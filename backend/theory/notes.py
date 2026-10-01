@@ -33,3 +33,19 @@ def note_at(pitch: int) -> Note:
 def pitch_of(name: str) -> Note:
     return 
 
+"""useful table to reference
+Note	Frequency (Hz)
+A	    440.00
+A#	    466.16
+B	    493.88
+C	    523.25
+C#	    554.37
+D	    587.33
+D#	    622.25
+E	    659.26
+F	    698.46
+F#	    739.99
+G	    783.99
+G#	    830.61
+
+each note being approximately 1.0595 times the frequency of the previous note."""
