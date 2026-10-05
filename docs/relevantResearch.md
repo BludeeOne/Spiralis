@@ -1,6 +1,6 @@
 Key Ideas / Essentia Tools
 
-
+ 
 #BPM - beat tracking and audio waveforms
 https://essentia.upf.edu/tutorial_rhythm_beatdetection.html
 

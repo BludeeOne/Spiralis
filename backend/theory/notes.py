@@ -32,7 +32,7 @@ def note_at(pitch: int) -> Note:
 
 def pitch_of(name: str) -> Note:
     return 
-
+ 
 """useful table to reference
 Note	Frequency (Hz)
 A	    440.00

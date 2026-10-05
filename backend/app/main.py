@@ -1,4 +1,4 @@
-"""Spiralis API.
+"""Spiralis API
 
 Run from backend/:  uvicorn app.main:app --reload
 Demo:               http://localhost:8000/
@@ -27,6 +27,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+from app.routes.analyze import router as analyze_router
+app.include_router(analyze_router)
 
 
 @app.get("/", include_in_schema=False)

@@ -24,8 +24,8 @@ def load_audio(path: str | Path) -> np.ndarray:
 
 def chroma_frames(audio: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Return (chroma[n, 12] with C at index 0, frame center times[n], frame rms[n])."""
-    window = es.Windowing(type = "blackmanharrris62")   #essentia tool for tapering chunks edges to prevent spectral leakage
-    spectrum = es.Spectrum()                            #returns the strength of each frequency, 10hz wide
+    window = es.Windowing(type = "blackmanharris62")   #   spectrum = es.Spectrum()                            
+    spectrum = es.Spectrum()
     peaks = es.SpectralPeaks(                           #keeps only local maxima between 40 and 5000hz, 
         orderBy="magnitude", magnitudeThreshold=1e-5,
         minFrequency=40, maxFrequency=5000, maxPeaks=100, sampleRate=SAMPLE_RATE,
