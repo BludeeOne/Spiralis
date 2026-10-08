@@ -1,15 +1,59 @@
 """
-analyze.py — POST /api/analyze, the conductor.
+analyze.py — takes the detection results and runs them through the pipeline
 
-Receives one ~2 s WAV chunk and walks it through the pipeline:
+This file is basically the middle step of the whole process. It takes one
+~2 second WAV chunk, sends it through the audio detection code, and then
+passes those results to the music theory side of the program.
+
+The basic flow is:
 
     WAV bytes
-      └─▶ audio.detection      signal → pitch classes, chroma, BPM, peak_hz
-            └─▶ theory_bridge  pitch classes → chord, key, scales, suggestions
-                  └─▶ AnalyzeResponse (schemas.py)
+      
+    audio.detection
+      
+    pitch classes, chroma, BPM, peak_hz
+      
+    theory_bridge
+      
+    chord, key, scales, suggestions
+      
+    AnalyzeResponse (schemas.py)
 
-Errors: anything Essentia can't decode becomes a 400 with a readable
-`detail`, so a bad chunk never takes the server down.
+
+1. AUDIO DETECTION
+
+The WAV chunk is first sent to `audio.detection`, which handles all of the
+actual audio processing.
+
+This gives us things like the detected pitch classes, the chroma vector,
+the BPM, and the strongest frequency (`peak_hz`).
+
+
+2. THEORY BRIDGE
+
+Once we have the raw detection results, they are passed to `theory_bridge`.
+
+This is where the program starts interpreting the notes as music. It uses
+the detected pitch classes to figure out the most likely chord, key, scales,
+and other suggestions.
+
+
+3. RESPONSE
+
+The final results are put into an `AnalyzeResponse`, which follows the
+schemas defined in `schemas.py`.
+
+The important thing about this file is that it connects the audio detection
+side to the music theory side without doing all of that work itself.
+
+
+ERROR HANDLING
+
+If Essentia can't decode or process the audio, the error is caught and
+returned as a 400 response with a readable `detail` message.
+
+This keeps one bad audio chunk from crashing the entire server
+
 """
 import json
 import tempfile
@@ -41,7 +85,7 @@ MAX_HISTORY = 32
 
 
 def _call(name: str, pending: list[str], *args):
-    """Call a bridge function and record missing theory functions."""
+    """Call a theory bridge function and record missing or broken theory functions"""
     fn = getattr(theory_bridge, name, None)
 
     if fn is None:
@@ -73,7 +117,7 @@ def _parse_history(raw: str) -> list[dict]:
 
 
 def _key_response(key):
-    """Frontend key format. The bridge already spells name and relative."""
+    """Frontend key format. The bridge already spells name and relative"""
     if not key:
         return None
 
@@ -81,7 +125,7 @@ def _key_response(key):
 
 
 def _scale_names(scales):
-    """Keep the frontend scale contract as a list of strings."""
+    """Keep the frontend scales as a list of strings"""
     return [
         scale["name"] if isinstance(scale, dict) else scale
         for scale in scales
@@ -98,7 +142,7 @@ def analyze(audio: UploadFile = File(...), history: str = Form("[]")):
         raise HTTPException(400, "Empty audio")
 
     with tempfile.NamedTemporaryFile(suffix=".wav") as tmp:
-        # MonoLoader needs a real path.
+        #monoLoader needs a real path
         tmp.write(data)
         tmp.flush()
 
@@ -107,8 +151,8 @@ def analyze(audio: UploadFile = File(...), history: str = Form("[]")):
         except RuntimeError as e:
             raise HTTPException(400, f"Could not decode audio: {e}") from e
 
-    # One pitch-class set for the whole chunk: average the chroma of
-    # the frames where the detector found active pitch classes.
+    #one pitch-class set for the whole chunk: average the chroma of
+    #the frames where the detector found active pitch classes
     sounding = [
         frame for frame in feats["frames"]
         if frame["pitch_classes"]

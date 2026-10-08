@@ -1,3 +1,5 @@
+/** ChordPanel.tsx — the chord currently sounding */
+
 import type { ChordInfo, HistoryItem } from '../types'
 import { Panel, Pending } from './Panel'
 

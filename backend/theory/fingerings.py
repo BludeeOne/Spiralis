@@ -1,13 +1,33 @@
-# fingerings.py
-# Author: Erik Flores-Siemsen
-# Date: September 2026
-# Description: Finding playable guitar chord voicings and scale positions
+"""
+fingerings.py — from pitch classes to the fretboard.
 
+THE NECK IS ARITHMETIC
+  Standard tuning, low to high:  E  A  D  G  B  E   ->  {4, 9, 2, 7, 11, 4}
+  Each fret raises a string one semitone, so the fret that gives pitch class
+  p on a string tuned to s is
+
+                    fret = (p − s) mod 12        (+ 12 for the next octave)
+
+  Every chord tone therefore appears on every string  the question is which
+  combination a human hand can actually play
+my voicings logic isnt perfect, I think I could really stretch i tout and i lose out by only muting low strings
+VOICINGS
+  A playable voicing:
+    - uses one note (or mute) per string
+    - covers every chord tone, root ideally in the bass
+    - spans <= ~4 frets (finger stretch)
+  Candidates are ranked by span, open strings, and how low the root sits.
+
+In this file
+  - fret positions for a pitch class on each string
+  - generate and rank chord voicings
+  - scale positions on the neck
+"""
 STANDARD_TUNING = [4, 9, 2, 7, 11, 4]
 
 
 def neck_positions(pcs, frets=12, tuning=STANDARD_TUNING):
-    """Find every fret on each string that contains one of the notes"""
+    """find every fret on each string that contains one of the notes"""
     wanted = {p % 12 for p in pcs}
 
     return [
@@ -23,9 +43,9 @@ def chord_voicings(
     tuning=STANDARD_TUNING,
     span=4,
 ):
-    """find simple playable chord shapes within a small fret span.
+    """find simple playable chord shapes within a small fret span
     Each string gets one note, or is muted with None/x. The shape is ranked
-    by fret span, number of muted strings, and whether the root is in the bass.
+    by fret span, number of muted strings, and whether the root is in the bass
     """
     wanted = {p % 12 for p in pcs}
     root = root % 12 if root is not None else None
@@ -46,7 +66,7 @@ def chord_voicings(
             if high - low > span:
                 return
 
-        # Mutes can only be on the low strings so the shape can still
+        #mutes can only be on the low strings so the shape can still
         # be strummed normally 
         first_played = next(
             (i for i, fret in enumerate(shape) if fret is not None),
@@ -68,16 +88,16 @@ def chord_voicings(
 
         score = 0
 
-        # Smaller fret spans are easier to play
+        #smaller fret spans are easier to play
         if used:
             low = min(used)
             high = max(used)
             score -= (high - low) * 2
 
-            # Favor lower positions
+            #favor lower positions
             score -= low // 2
 
-            # Open strings mixed with high frets are usually a stretch
+            #open strings mixed with high frets are usually a stretch
             if 0 in shape and high > 5:
                 score -= 3
 
@@ -133,7 +153,7 @@ def chord_voicings(
 
 
 def scale_positions(pcs, frets=12, tuning=STANDARD_TUNING):
-    """Find scale notes across the guitar neck."""
+    """Find scale notes across the guitar neck"""
     positions = neck_positions(pcs, frets, tuning)
 
     return [

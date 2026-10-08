@@ -5,6 +5,33 @@ Play your guitar into your mic and Spiralis tells you what you're playing the no
 
   Each source file opens with a header explaining the science behind it. This README only covers the path through the program. Follow the tree, then open the file you're curious about!
 
+
+
+HOW TO RUN:
+## Running Spiralis locally
+
+You need two terminals, one for the backend and one for the frontend
+
+### Backend (FastAPI on :8000)
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+Next time, just `cd backend && source .venv/bin/activate && uvicorn app.main:app --reload`.
+
+### Frontend (Vite on :5173)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Open http://localhost:5173 and allow mic access. Vite proxies `/api` to the backend, so it needs to be running first
+it doesnt always ask for mic access but when you press the play button it does and you can start going at it
+
+
 The Pipeline Through Spiralis
 a sound is played
   │

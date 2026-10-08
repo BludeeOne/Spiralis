@@ -1,3 +1,5 @@
+/** Tuner.tsx — peak_hz as note + cents needle (see audio/pitch.ts) */
+
 import { useEffect, useRef, useState } from 'react'
 import { freqToNote, SHARPS, yin, type NoteReading } from '../audio/pitch'
 import { Panel } from './Panel'

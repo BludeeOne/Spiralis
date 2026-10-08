@@ -1,7 +1,18 @@
+/**
+ * useMic.ts — the start of the pipeline
+ *
+ * Opens the mic with getUserMedia and turns OFF echoCancellation,
+ * noiseSuppression and autoGainControl. Those are tuned for voice calls and
+ * actively distort sustained musical tones (AGC pumps volume, noise
+ * suppression eats the decay of a ringing string).
+ *
+ * Buffers raw Float32 samples into ~2 s chunks and hands each one to wav.ts.
+ */
+
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { encodeWav } from './wav'
 
-// Worklet that copies raw mic frames back to the main thread.
+//worklet that copies raw mic frames back to the main thread
 const TAP = `class PcmTap extends AudioWorkletProcessor {
   process(inputs) { const ch = inputs[0] && inputs[0][0]; if (ch) this.port.postMessage(ch.slice(0)); return true }
 }
@@ -15,7 +26,7 @@ function describe(err: unknown): string {
   return err instanceof Error ? err.message : String(err)
 }
 
-// Opens the mic and exposes an AnalyserNode for the tuner, then emits WAV chunks every `chunkSec`
+//ppens the mic and exposes an AnalyserNode for the tuner, then emits WAV chunks every `chunkSec`
 export function useMic(onChunk: (wav: Blob) => void, chunkSec = 2) {
   const [listening, setListening] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -37,7 +48,7 @@ export function useMic(onChunk: (wav: Blob) => void, chunkSec = 2) {
   const start = useCallback(async () => {
     setError(null)
     try {
-      //Voice processing is off cuase it mangles sustained guitar notes
+      //voice processing is off cuase it mangles sustained guitar notes
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
       })

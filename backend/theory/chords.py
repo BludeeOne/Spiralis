@@ -1,8 +1,35 @@
-# chords.py
-# Author: Erik Flores-Siemsen
-# Date: September 2026
-# Description: Builds and identifies chords using pitch classes
+"""
+chords.py — naming those sounds
+STACKED THIRDS
+  Chords are built by stacking thirds on a root
+    Relative to the root:
 
+        major       0  4  7          (M3 + m3)
+        minor       0  3  7          (m3 + M3)
+        diminished  0  3  6
+        augmented   0  4  8
+        dom7        0  4  7  10
+        maj7        0  4  7  11
+        min7        0  3  7  10
+        sus2 / sus4 0  2  7 / 0  5  7   (third replaced)
+
+IDENTIFICATION
+  Given a pitch-class set, try every possible root r: subtract r from each
+  note (mod 12) and compare against the templates. Real audio is messy 
+  extra overtones, a missing third so exact matching is too strict and hard
+  Instead each candidate is scored: reward template notes present, penalise
+  extras and missing chord tones, and weight the third heavily since it
+  decides major vs minor.
+
+INVERSIONS
+  C/E is still C major but the bass note changes. Because we
+  work on pitch-class sets, inversions are more easily identifiable
+
+In this file
+  - chord templates
+  - identify(pcs) -> best (root, quality) with a score
+  - chord -> pitch classes for display / fingerings
+"""
 from .notes import name_of
 
 #Intervals above the root for each chord type so it just do the math to find the right notes
@@ -93,7 +120,7 @@ def is_minorish(suffix: str) -> bool:
 
 
 def slash_name(root: int, suffix: str, bass: int, flats: bool = False) -> str:
-    """Return a chord name with a slash bass when the bass is different"""
+    """return a chord name with a slash bass when the bass is different"""
     name = chord_name(root, suffix, flats)
     bass = bass % 12
 

@@ -1,12 +1,12 @@
 """
-schemas.py — the contract between backend and frontend.
+schemas.py The tal between front and backend
 
 Pydantic models for everything that crosses the wire. The frontend panels read
 these field names directly, so renaming a field here is a breaking change for
 the components in frontend/src/components/ (and types.ts mirrors them).
 
 Conventions
-  - Pitch classes are ints 0–11 with C = 0. Names are added only at the edge.
+  - Pitch classes are ints 0–11 with C = 0. essentia starts with A = 0, but it was no issue
   - `pending` lists theory functions that raised NotImplementedError, so the UI
     can say "waiting on chords.identify" instead of showing blank boxes.
 """
@@ -20,11 +20,11 @@ class KeyEstimate(BaseModel):
 
 
 class BeatFrame(BaseModel):
-    start: float                     # seconds
-    end: float
-    chroma: list[float]              # 12 values, index 0 = C
-    pitch_classes: list[int]         # active notes, 0-11, at most 5 to reduce computation time
-    bass: int | None = None          # lowest strong pitch class, if detected
+    start: float                    # seconds
+    end: float                      # also seconds
+    chroma: list[float]             # 12 values index 0 = C
+    pitch_classes: list[int]        # active notes, 0-11, at most 5 to reduce computation time ;P
+    bass: int | None = None         # lowest strong pitch class, if detected
 
 
 class AudioFeatures(BaseModel):
@@ -37,8 +37,8 @@ class AudioFeatures(BaseModel):
 class KeyInfo(BaseModel):
     tonic: int
     mode: str                        # "major" | "minor"
-    name: str                        # "Bb major"
-    relative: str                    # "G minor"
+    name: str                        # i.e "Bb major"
+    relative: str                    # i.e. "G minor" relative is the same key 3 semitones down major
 
 
 class TheoryResult(BaseModel):

@@ -1,3 +1,5 @@
+/** KeyPanel.tsx — detected key and its relative major/minor */
+
 import type { KeyInfo } from '../types'
 import { Panel, Pending } from './Panel'
 

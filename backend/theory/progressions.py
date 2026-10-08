@@ -1,9 +1,35 @@
-# progressions.py
-# Author: Erik Flores-Siemsen
-# Date: September 2026
-# Description: Builds chord progressions and identifies keys
-# i.e. I - II - III - IV | VI - V - IV
+"""
+progressions.py — where the song can go next
 
+DIATONIC HARMONY
+  Stack thirds using only notes of a scale and every degree gets its own
+  chord. In a major key the qualities are always:
+
+        I    ii   iii   IV   V    vi   vii°
+       maj  min  min   maj  maj  min  dim
+
+  In C: C  Dm  Em  F  G  Am  B°. Roman numerals describe a chord's *job*
+  in the key, independent of the actual key — which is why I–V–vi–IV sounds
+  the same in any key.
+
+FUNCTION
+  Chords group by role:
+        tonic (rest)        I, vi, iii
+        predominant (move)  ii, IV
+        dominant (tension)  V, vii°
+  Typical motion: tonic -> predominant -> dominant -> tonic Strongest single
+  move: V -> I (the root falls a fifth -> one step on the circle).
+
+NEXT-CHORD SUGGESTIONS
+  From the current chord's function, suggest chords that continue the
+  tonic -> predominant -> dominant flow, plus common moves borrowed from
+  neighbouring keys on the circle of fifths
+
+In this file
+  - roman numeral of a chord in a key
+  - diatonic chords for a key
+  - suggested next chords / alternate song paths
+"""
 from .chords import CHORD_TYPES, identify, is_minorish
 from .circle_of_fifths import relative_minor
 from .scales import key_scale
@@ -104,7 +130,7 @@ def roman_numeral(root: int, suffix: str, tonic: int, mode: str) -> str | None:
 
 
 def suggest_next(root: int, tonic: int, mode: str) -> list[tuple[int, str, str]]:
-    """Return common next chords for the current chord."""
+    """Return common next chords for the current chord"""
     scale = key_scale(tonic, mode)
     current_degree = scale.index(root) if root in scale else 0
 

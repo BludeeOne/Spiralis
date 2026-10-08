@@ -1,3 +1,5 @@
+/** ScalesPanel.tsx — every scale that contains the notes played */
+
 import { Panel, Pending } from './Panel'
 
 export function ScalesPanel({ scales, pending }: { scales: string[]; pending: boolean }) {

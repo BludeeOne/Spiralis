@@ -1,3 +1,5 @@
+/** ProgressionsPanel.tsx — what you've played, as roman numerals in the key */
+
 import type { Numbered } from '../types'
 import { Panel, Pending } from './Panel'
 

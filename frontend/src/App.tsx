@@ -1,5 +1,10 @@
+/**
+ * App.tsx — layout + the analyze loop: mic chunk -> api.ts -> latest response
+ * fanned out to every panel 
+ * Keeps chord history for Timeline
+ */
 import { useCallback, useRef, useState } from 'react'
-import { analyze, MOCK } from './api'
+import { analyze } from './api'
 import { useMic } from './audio/useMic'
 import type { AnalyzeResponse, HistoryItem } from './types'
 import { ChordPanel } from './components/ChordPanel'
@@ -46,7 +51,6 @@ export default function App() {
         <h1 className="wordmark">Spiralis</h1>
         <p className="status" aria-live="polite">
           {mic.listening ? <><i className="dot live" /> Listening</> : <><i className="dot" /> Not listening</>}
-          {MOCK && <span className="mock">mock data</span>}
         </p>
         <button className="ghost" onClick={reset} disabled={!history.length}>Clear session</button>
       </header>

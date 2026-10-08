@@ -1,5 +1,13 @@
-// Single-note pitch detection for the tuner (YIN, de Cheveigné & Kawahara 2002).
-// Runs in the browser so the tuner stays real-time; chords go to the backend.
+/**
+ * pitch.ts — frequency -> note name + cents for the Tuner
+ *
+ *   semitones from A4 = 12 · log2(f / 440)
+ *   note  = round(that)            (mod 12 for the pitch class)
+ *   cents = 100 · (that − note)    (−50 … +50, 0 = in tune)
+ *
+ * Fed by peak_hz from the backend; no detection runs in the browser
+ */
+//
 export function yin(buf: Float32Array, sr: number, threshold = 0.15): number | null {
   let energy = 0
   for (let i = 0; i < buf.length; i++) energy += buf[i] * buf[i]

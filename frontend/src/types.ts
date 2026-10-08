@@ -1,5 +1,7 @@
-// The contract between the frontend and POST /api/analyze.
-// Pitch classes are ints 0-11 with C = 0, same convention as the backend.
+/**
+ * types.ts — TypeScript mirror of backend/app/schemas.py.
+ * Change a field there -> change it here, or the panels silently show blanks.
+ */
 export type PitchClass = number
 
 export interface HistoryItem {

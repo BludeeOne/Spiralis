@@ -1,73 +1,97 @@
 """
-detection.py — turning sound into pitch classes.
+detection.py — turning sound into pitch classes
 
-All Essentia calls live here. Output is deliberately music-theory-free: sets
-of integers 0–11 (C = 0), a 12-bin chroma vector, BPM, and the strongest
-frequency. Naming chords is theory/'s job.
+This file handles all of the Essentia stuff. The goal is to take an audio
+file and turn it into useful information about what notes are being played.
+
+The output is kept simple: pitch classes as integers from 0–11 (C = 0),
+a 12-bin chroma vector, BPM, and the strongest frequency found in the audio.
+The actual chord naming is handled somewhere else.
 
 THE PATH
-    WAV ─▶ frames ─▶ window ─▶ FFT ─▶ peaks ─▶ HPCP ─▶ beat-sync ─▶ threshold
-                                       │                                   │
-                                    peak_hz                         {0, 4, 7}
+
+    WAV -> frames -> window -> FFT -> peaks -> HPCP -> beat-sync -> threshold
+                                      │                         │
+                                   peak_hz                  {0, 4, 7}
+
 
 1. DECODE
-   WAV bytes → mono float32 at the browser's sample rate (usually 48 kHz).
-   WAV is used because it needs no codec, so it decodes identically on every
-   machine.
 
-2. FRAMING + WINDOWING  (Blackman-Harris 62)
-   A song isn't one frequency over time, so we analyse short overlapping
-   frames, each treated as "frozen" in time. Cutting a frame out of a signal
-   creates hard edges, and the FFT reads those edges as fake frequencies
-   smeared across the spectrum (spectral leakage). A window tapers each frame
-   to zero at both ends. Blackman-Harris trades a slightly wider main peak
-   for very low sidelobes (−62 dB), so a loud low E doesn't bleed into the
-   bins of the quiet G# next to it.
+The WAV file is decoded into mono float32 audio using the browser's sample
+rate, which is usually 48 kHz.
 
-3. SPECTRUM  (FFT)
-   The Fourier transform rewrites a frame as a sum of sine waves and reports
-   how much energy sits at each frequency. Frequency resolution is
-   sample_rate / frame_size; bigger frames = finer pitch, worse timing.
+WAV is used because it doesn't need an extra codec, so the audio should
+decode the same way on different machines.
+
+
+2. FRAMING + WINDOWING (Blackman-Harris 62)
+
+A song isn't just one frequency. The frequencies change constantly, so we
+break the audio into small overlapping frames and treat each frame like a
+snapshot of the sound at that moment
+
+The problem is that cutting the audio into frames creates sharp edges. The
+FFT can interpret those edges as extra frequencies, which is called spectral
+leakage
+
+To reduce this, each frame is passed through a window that gradually brings
+the signal down to zero at both ends. We use a Blackman-Harris window because
+it has very low sidelobes (-62 dB). This helps stop a loud note, like a low E,
+from bleeding into nearby frequencies and making quieter notes harder to
+detect
+
+
+3. SPECTRUM (FFT)
+
+The FFT takes each frame and breaks it down into the different frequencies
+that make up the sound. Basically, it tells us how much energy exists at
+each frequency.
+
+The frequency resolution is:
+
+    sample_rate / frame_size
+
+Using a larger frame gives us better frequency resolution, which helps with
+pitch detection, but it also means we lose some timing information.
+
 
 4. SPECTRAL PEAKS
-   We keep only the local maxima — the actual partials of the strings — and
-   drop the noise floor between them. The single loudest one is reported as
-   `peak_hz` (useful as a tuner).
 
-5. CHROMA  (HPCP — Harmonic Pitch Class Profile)
-   Octaves don't matter for harmony: every C sounds like "C". Pitch class of
-   a frequency f:
-                  pc = round(12 · log2(f / 440)) mod 12      (A = 0 here)
-   HPCP folds every peak into one of 12 bins this way, weighting by
-   magnitude, and optionally adds credit for harmonics (a note's overtones at
-   2f, 3f, 4f … ). Result: a 12-number "fingerprint" of which notes are
-   sounding.
+Instead of using every frequency in the spectrum, we look for the local
+peaks. These peaks are usually the actual notes and harmonics produced by
+the instrument.
 
-   Gotcha: Essentia's HPCP puts its reference (A = 440 Hz) at bin 0. We
-   np.roll(hpcp, -3) so bin 0 = C, matching theory/notes.py.
+The strongest peak is saved as `peak_hz`. This can also be useful for things
+like basic tuning since it gives us the strongest frequency in the signal.
 
-   Tuning matters: bins are a semitone (100 cents) wide. An instrument ~50
-   cents off sits on the border between two bins and splits its energy.
 
-6. BEATS + BPM
-   Essentia's beat tracker finds onsets (sudden energy rises) and fits a
-   steady grid to them, which gives both the beat positions and the tempo.
+5. CHROMA (HPCP — Harmonic Pitch Class Profile)
 
-7. BEAT-SYNCHRONISATION
-   Chords tend to change on beats. Averaging the chroma frames *between*
-   beats gives one stable vector per beat instead of jittery per-frame noise.
+For chords, the exact octave isn't as important as the note itself. For
+example, a C played low and a C played high are still both C.
 
-8. THRESHOLDING → PITCH-CLASS SETS
-   Normalise each beat's chroma so the loudest bin = 1.0, keep bins ≥ 0.5.
-   {0, 4, 7} → "C, E, G are sounding".
+The pitch class of a frequency can be thought of as:
 
-   Known weakness: a guitar E major has three E strings and two B strings but
-   only one G#. The third can fall below 0.5 while overtones of the doubled
-   notes climb above it — so E gets misread as B, Eadd9, Esus. The fix is
-   template matching on the full chroma vector instead of a hard threshold.
-   scripts/chroma_debug.py exists to experiment with this.
+    pc = round(12 · log2(f / 440)) mod 12
+
+with A = 0 for this calculation.
+
+HPCP takes the frequencies we found and folds them into 12 pitch classes.
+It also considers the strength of each frequency and can give extra weight
+to harmonics, such as 2f, 3f, 4f, etc.
+
+The result is basically a 12-number fingerprint showing which notes are
+present in the audio.
+
+One important detail is that Essentia's HPCP uses A as bin 0. Our program
+uses C as bin 0 instead, so we do:
+
+    np.roll(hpcp, -3)
+
+This keeps the chroma format consistent with theory/notes.py.
+
+Tuning can also cause problems here
 """
-
 from pathlib import Path
 
 import numpy as np

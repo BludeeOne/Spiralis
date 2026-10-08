@@ -1,9 +1,9 @@
 """
-notes.py — the foundation: pitch classes and how to spell them.
+notes.py — the foundation of it all, pitch classes and letters
 
 PITCH CLASSES
   Western music uses 12-tone equal temperament: the octave is split into 12
-  equal steps (semitones), each a frequency ratio of 2^(1/12) ≈ 1.0595.
+  equal steps (semitones), each a frequency about 1.0595 times up
   After 12 steps you're back to the same note an octave up, so notes live on
   a clock:
 
@@ -11,16 +11,16 @@ PITCH CLASSES
         A=9  A#/Bb=10  B=11
 
   Every interval is just subtraction mod 12. Transposition is addition mod 12.
-  All internal logic in Spiralis works on these integers.
+  All internal logic in Spiralis works on these integers
 
 SPELLING
-  The same key on the piano can have two names (A# vs Bb — enharmonics).
+  The same key on the piano can have two names (A# vs Bb)
   Which is correct depends on the key, not the pitch: a scale uses each
-  letter A–G exactly once, so F major is F G A **Bb** C D E, never A#.
-  Names are only produced at the edges (display, user input).
+  letter A-G exactly once, so F major is F G A *Bb* C D E, never A#.
+  Names are only produced at the edges (display, user input)
 
 In this file
-  - pitch-class ↔ name conversion
+  - pitch-class <-> name conversion
   - parse_note_name() for the written-input feature
   - spell(pc, key) — choose the correct enharmonic for a key
 """
@@ -61,7 +61,7 @@ def note_at(pitch: int) -> Note:
 
 
 def pitch_of(name: str) -> int:
-    """Convert a written note name into a pitch class."""
+    """convert a written note name into a pitch class"""
     name = name.strip()
 
     if not name or name[0].upper() not in LETTERS:
@@ -81,7 +81,7 @@ def pitch_of(name: str) -> int:
 
 
 def uses_flats(tonic: int, mode: str = "major") -> bool:
-    """Return whether the key normally uses flat note names."""
+    """return whether the key normally uses flat note names"""
     tonic = tonic % 12
 
     if mode == "major":
@@ -91,7 +91,7 @@ def uses_flats(tonic: int, mode: str = "major") -> bool:
 
 
 def name_of(pitch: int, flats: bool = False) -> str:
-    """Return a basic sharp or flat name for a pitch class."""
+    """return a basic sharp or flat name for a pitch class"""
     note = note_at(pitch)
 
     if flats:
@@ -101,7 +101,7 @@ def name_of(pitch: int, flats: bool = False) -> str:
 
 
 def key_spelling(tonic: int, mode: str = "major") -> dict[int, str]:
-    """Return the correct note name for every pitch in a key."""
+    """return the correct note name for every pitch in a key"""
     tonic = tonic % 12
 
     if mode == "major":
@@ -137,14 +137,14 @@ def key_spelling(tonic: int, mode: str = "major") -> dict[int, str]:
 
 
 def name_in_key(pitch: int, tonic: int, mode: str = "major") -> str:
-    """Return a pitch name using the spelling of the given key."""
+    """return a pitch name using the spelling of the given key"""
     pitch = pitch % 12
     spelling = key_spelling(tonic, mode)
 
     if pitch in spelling:
         return spelling[pitch]
 
-    # Keep natural notes natural when they are outside the key.
+    #keep natural notes natural when they are outside the key
     natural_names = {
         value: letter for letter, value in LETTERS.items()
     }
@@ -153,7 +153,7 @@ def name_in_key(pitch: int, tonic: int, mode: str = "major") -> str:
 
     scale = key_scale_for_spelling(tonic, mode)
 
-    # Try the scale note above first so flat spellings win.
+    #ry the scale note above first so flat spellings win
     for note in scale:
         if (note - 1) % 12 == pitch:
             letter = spelling[note][0]
@@ -164,7 +164,7 @@ def name_in_key(pitch: int, tonic: int, mode: str = "major") -> str:
                     "b" if diff < 0 else "#" if diff > 0 else ""
                 )
 
-    # Then try the scale note below for sharp spellings.
+    # then try the scale note below for sharp spellings
     for note in scale:
         if (note + 1) % 12 == pitch:
             letter = spelling[note][0]
@@ -178,7 +178,7 @@ def name_in_key(pitch: int, tonic: int, mode: str = "major") -> str:
     return name_of(pitch, uses_flats(tonic, mode))
 
 def key_scale_for_spelling(tonic: int, mode: str) -> list[int]:
-    """Return the seven pitch classes used to build key spelling."""
+    """return the seven pitch classes used to build key spelling"""
     tonic = tonic % 12
 
     if mode == "major":
@@ -191,4 +191,4 @@ def key_scale_for_spelling(tonic: int, mode: str) -> list[int]:
 
 # Useful frequency reference:
 # A = 440.00 Hz
-# Each half step is approximately 1.0595 times the frequency of the previous note.
+# Each half step is approximately 1.0595 times the frequency of the previous note

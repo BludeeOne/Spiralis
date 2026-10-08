@@ -1,3 +1,5 @@
+/** SuggestedPanel.tsx — next-chord suggestions from progressions.py */
+
 import type { Numbered } from '../types'
 import { Panel, Pending } from './Panel'
 

@@ -1,8 +1,15 @@
-"""Spiralis API.
+"""
+main.py 
 
-Run from backend/:  uvicorn app.main:app --reload
-Demo:               http://localhost:8000/
-Docs:               http://localhost:8000/docs
+Creates the FastAPI app, allows the Vite dev server (localhost:5173) through
+CORS, and mounts the routers in app/routes/. 
+
+from the web -> Cross-Origin Resource Sharing (CORS) is a browser security mechanism that lets 
+a web API explicitly allow requests from domains other than the one that served the web page, 
+using HTTP headers like Access-Control-Allow-Origin.
+
+Run:  uvicorn app.main:app --reload
+run this command from one of two terminals, this one is the backend
 """
 import tempfile
 from pathlib import Path

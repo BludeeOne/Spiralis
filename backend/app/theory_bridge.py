@@ -1,27 +1,26 @@
 """
-theory_bridge.py — the only seam between audio and theory.
+theory_bridge.py — the cross from frequencies and science to beautiful harmoic noises
 
-detection.py speaks physics (frequencies, energy per pitch class).
-theory/ speaks music (chords, keys, roman numerals).
-This file is the single translator between them, so neither side has to know
-the other exists.
+detection.py speaks physics (frequencies, energy per pitch class)
+theory/ speaks music (chords, keys, roman numerals)
+this is the translator file that converts one to the other
 
 Graceful degradation
   Each theory call is wrapped: if a function raises NotImplementedError, its
-  name goes into `pending` and the rest of the response still ships. That lets
-  the engine be built one module at a time while the app keeps running.
+  name goes into `pending` and the rest of the response still ships. The app will always run even if i have more to implement]
+  or something straight up failed
 """
 from app.schemas import TheoryResult
 from theory import chords, circle_of_fifths, fingerings, notes, progressions, scales
 
 
 def _flats(key):
-    """Decide whether names in a key should normally use flats."""
+    """decide whether names in a key should normally use flats, as to not confuse normal musicans"""
     return notes.uses_flats(key["tonic"], key["mode"])
 
 
 def _key(tonic, mode):
-    """Build the key dictionary used by the app, with spelled names."""
+    """Build the key dictionary used by the app with spelled names"""
     tonic = tonic % 12
 
     if mode == "major":
@@ -38,7 +37,7 @@ def _key(tonic, mode):
 
 
 def _root_suffix(chord):
-    """Root and suffix of a chord dict, re-identifying from pcs if they're missing."""
+    """root and suffix of a chord dictionary, re-identifying from pcs if they're missing"""
     if "root" in chord:
         return chord["root"], chord.get("suffix", "")
 
@@ -47,7 +46,7 @@ def _root_suffix(chord):
 
 
 def identify_chord(pcs, bass=None):
-    """Identify a chord and return an API-friendly dictionary."""
+    """identify a chord and return an API-friendly dictionary"""
     result = chords.identify(pcs, bass)
 
     if result is None:
@@ -62,7 +61,7 @@ def identify_chord(pcs, bass=None):
 
 
 def estimate_key(chord_sets):
-    """Estimate the key from the detected chord history."""
+    """rstimate the key from the detected chord history"""
     result = progressions.detect_key(chord_sets)
 
     if result is None:
@@ -73,7 +72,7 @@ def estimate_key(chord_sets):
 
 
 def roman_numeral(chord, key):
-    """Translate a chord dictionary into a Roman numeral."""
+    """translate a chord dictionary into a Roman numeral"""
     if not chord:
         return None
 
@@ -86,7 +85,7 @@ def roman_numeral(chord, key):
 
 
 def suggest_next(chord, key):
-    """Return likely next chords for the current chord."""
+    """return likely next chords for the current chord"""
     if not chord:
         return []
 
@@ -109,7 +108,7 @@ def suggest_next(chord, key):
 
 
 def fitting_scales(key):
-    """Return scales that fit the current key."""
+    """return scales that fit the current keyr"""
     flats = _flats(key)
     tonic = key["tonic"]
     mode = key["mode"]
@@ -118,7 +117,7 @@ def fitting_scales(key):
     result = []
 
     for scale_type in scale_names:
-        # Scales from the other mode start on the relative key.
+        #scales from the other mode start on the relative key
         if scale_type in ("major", "major_pentatonic") and mode == "minor":
             root = circle_of_fifths.relative_major(tonic)
         elif scale_type in ("natural_minor", "minor_pentatonic") and mode == "major":
@@ -149,7 +148,7 @@ def fitting_scales(key):
 
 
 def fitting_chord_scales(chord, key=None):
-    """Return scales that work over a specific chord."""
+    """return scales that work over a specific chord"""
     if not chord:
         return []
 
@@ -186,7 +185,7 @@ def fitting_chord_scales(chord, key=None):
 
 
 def respell(history, key):
-    """Respell chord history so note names follow the current key."""
+    """respell chord history so note names follow the current key"""
     flats = _flats(key)
     result = []
 
@@ -212,7 +211,7 @@ def respell(history, key):
 
 
 def spell(pcs, key):
-    """Spell a group of pitch classes using the current key."""
+    """spell a group of pitch classes using the current key"""
     if not key:
         return [notes.name_of(pitch) for pitch in pcs]
 
@@ -223,7 +222,7 @@ def spell(pcs, key):
 
 
 def chord_voicings(chord, key=None):
-    """Return playable guitar voicings for a chord."""
+    """return playable guitar voicings for a chord"""
     if not chord:
         return []
 
@@ -236,13 +235,13 @@ def chord_voicings(chord, key=None):
 
 
 def scale_positions(scale_root, scale_type):
-    """Return guitar-neck positions for a scale."""
+    """return guitar-neck positions for a scale"""
     pcs = scales.get_scale(scale_root, scale_type)
     return fingerings.scale_positions(pcs)
 
 
 def parse_written(chords_in):
-    """Convert written chord names into the same format as detected chords."""
+    """convert written chord names into the same format as detected chords"""
     result = []
 
     for name in chords_in:
@@ -277,7 +276,7 @@ def parse_written(chords_in):
 
 
 def analyze(frames, key_hint=None):
-    """Analyze detected frames (pcs lists or {"pcs", "bass"} dicts) into a TheoryResult."""
+    """analyze detected frames (pcs lists or {"pcs", "bass"} dicts) into a TheoryResult"""
     history = []
 
     for frame in frames:
@@ -313,7 +312,7 @@ def analyze(frames, key_hint=None):
 
 
 def analyze_written(names):
-    """Chord names in (["C", "G7", "Am"]), same TheoryResult out as live audio."""
+    """Chord names in (["C", "G7", "Am"]), same TheoryResult out as live audio"""
     parsed = parse_written(names)
     frames = [sorted(chords.build(c["root"], c["suffix"])) for c in parsed]
 

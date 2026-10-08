@@ -1,5 +1,11 @@
-// 16-bit mono PCM WAV. WAV avoids depending on the browser's MediaRecorder codecs.
-export function encodeWav(samples: Float32Array, sampleRate: number): Blob {
+/**
+ * wav.ts — Float32 samples → 16-bit PCM WAV bytes.
+ *
+ * WAV is a 44-byte header plus raw samples, so it can be built in the browser
+ * with no codec. That means the backend decodes the exact same bytes on every
+ * machine, unlike webm/opus from MediaRecorder
+ */
+  export function encodeWav(samples: Float32Array, sampleRate: number): Blob {
   const buf = new ArrayBuffer(44 + samples.length * 2)
   const v = new DataView(buf)
   const str = (o: number, s: string) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)) }

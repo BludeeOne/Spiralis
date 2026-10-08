@@ -1,3 +1,6 @@
+/**
+ * Panel.tsx — shared card wrapper every panel renders inside it,
+ */
 import type { ReactNode } from 'react'
 
 export function Panel({ title, area, children, className = '' }: { title: string; area: string; children: ReactNode; className?: string }) {

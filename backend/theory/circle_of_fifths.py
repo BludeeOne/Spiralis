@@ -1,13 +1,34 @@
-# circle_of_fifths.py
-# Author: Erik Flores-Siemsen
-# Date: September 2026
-# Description: Circle of fifths relationships between keys
+"""
+circle_of_fifths.py — the map of keys
 
-# Pitch classes around the circle, moving clockwise by fifths
+THE CIRCLE
+  Go up a perfect fifth (7 semitones) twelve times and you visit every pitch
+  class exactly once before returning home, because gcd(7, 12) = 1:
+
+        C -> G -> D -> A -> E -> B -> F# -> C#/Db -> Ab -> Eb -> Bb -> F -> C
+
+  Each step clockwise adds one sharp to the key signature; each step
+  counter-clockwise adds one flat.
+
+WHY NEIGHBOURS MATTER
+  Adjacent keys share 6 of their 7 (haha 67) notes (C and G differ only by F vs F#)
+  That's why moves around the circle sound smooth and why "chords from the
+  neighbouring keys" are the safest borrowed chords to suggest
+
+RELATIVE MINOR
+  Each major key shares all seven notes with the minor key 3 semitones
+  below its root (C major ↔ A minor) so they sit on the same spoke of the
+  wheel
+
+In this file
+  - circle order, position of a key
+  - neighbours (+- 1 step) and relative minor/major
+  - key detection: which major/minor scale best contains the notes heard
+"""
 CIRCLE = [(i * 7) % 12 for i in range(12)]
 
-# Number of sharps/flats in each major key signature
-# Negative values mean flats, positive values mean sharps
+#number of sharps/flats in each major key signature
+#negative values mean flats, positive values mean sharps
 KEY_SIGNATURES_SHARPS = {
     0: 0,    # C
     7: 1,    # G
@@ -30,7 +51,7 @@ KEY_SIGNATURES_FLATS = {
     11: -7,  # Cb
 }
 
-# Use the common enharmonic spelling for the seven-sharp/seven-flat keys.
+#use the common enharmonic spelling for the seven-sharp/seven-flat keys
 KEY_SIGNATURE_NAMES = {
     0: "C",
     1: "C#",
@@ -48,7 +69,7 @@ KEY_SIGNATURE_NAMES = {
 
 
 def neighbors(tonic):
-    """Return the keys a fourth and fifth away"""
+    """return the keys a fourth and fifth away"""
     return (tonic + 5) % 12, (tonic + 7) % 12
 
 
@@ -58,12 +79,12 @@ def relative_minor(tonic):
 
 
 def relative_major(tonic):
-    """Return the relative major of a minor key"""
+    """return the relative major of a minor key"""
     return (tonic + 3) % 12
 
 
 def key_signature(tonic, flats=None):
-    """Return the number of sharps or flats in a major key signature"""
+    """return the number of sharps or flats in a major key signature"""
     tonic = tonic % 12
 
     if flats is None:
@@ -78,7 +99,7 @@ def key_signature(tonic, flats=None):
 
 
 def closely_related_keys(tonic):
-    """Return the five closely related major keys around a tonic
+    """return the five closely related major keys around a tonic
     These are the tonic, its fourth, its fifth, and the relative minors
     of those two neighboring major keys
     """
@@ -97,7 +118,7 @@ def closely_related_keys(tonic):
 
 
 def circle_position(tonic):
-    """Return the position of a key on the circle, from 0 to 11"""
+    """return the position of a key on the circle, from 0 to 11"""
     tonic = tonic % 12
 
     return CIRCLE.index(tonic)

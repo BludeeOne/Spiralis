@@ -1,3 +1,5 @@
+/** Timeline.tsx — chord history over time */
+
 import type { HistoryItem } from '../types'
 
 interface Props {
