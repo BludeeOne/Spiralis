@@ -1,19 +1,147 @@
-# scales.py 
+# scales.py
 # Author: Erik Flores-Siemsen
 # Date: September 2026
-# Description: Every scale on guitar listed out and available to view
-# Instead of writing out each scale, write an algorithm that finds the scale depending on the key
+# Description: Builds scales and finds scales that fit a key or chord
 
-from .notes import NOTES
+# Whole and half step pattern for the major scale.
+# The seven modes are rotations of this pattern.
+MAJOR = [2, 2, 1, 2, 2, 2, 1]
+MODES = [
+    "ionian",
+    "dorian",
+    "phrygian",
+    "lydian",
+    "mixolydian",
+    "aeolian",
+    "locrian",
+]
 
-# whole\half step pattern for each scale type
-Scale_Intervals = {
-    "major":            [2, 2, 1, 2, 2, 2, 1],
-    "natural_minor":    [2, 1, 2, 2, 1, 2, 2],
-    "melodic_minor":    [2, 1, 2, 2, 2, 2, 1],
-    "dorian":           [2, 1, 2, 2, 2, 1, 2],
-    "mixolydian":       [2, 2, 1, 2, 2, 1, 2],
+SCALE_INTERVALS = {
+    mode: MAJOR[i:] + MAJOR[:i]
+    for i, mode in enumerate(MODES)
 }
 
-def get_scale(root:str, scale_type: str = "major"  ): 
-    pass
+SCALE_INTERVALS["major"] = SCALE_INTERVALS["ionian"]
+SCALE_INTERVALS["natural_minor"] = SCALE_INTERVALS["aeolian"]
+SCALE_INTERVALS["harmonic_minor"] = [2, 1, 2, 2, 1, 3, 1]
+SCALE_INTERVALS["melodic_minor"] = [2, 1, 2, 2, 2, 2, 1]
+SCALE_INTERVALS["whole_tone"] = [2, 2, 2, 2, 2, 2]
+
+# Pentatonic scales keep five degrees from their parent scale.
+PENTATONIC = {
+    "major_pentatonic": ("major", [0, 1, 2, 4, 5]),
+    "minor_pentatonic": ("natural_minor", [0, 2, 3, 4, 6]),
+}
+
+
+def get_scale(root: int, scale_type: str = "major") -> list[int]:
+    """Build a scale as pitch classes starting from the root."""
+    if scale_type in PENTATONIC:
+        parent, keep = PENTATONIC[scale_type]
+        full = get_scale(root, parent)
+
+        return [full[i] for i in keep]
+
+    root = root % 12
+    pcs = [root]
+
+    for step in SCALE_INTERVALS[scale_type][:-1]:
+        pcs.append((pcs[-1] + step) % 12)
+
+    return pcs
+
+
+def key_scale(tonic: int, mode: str) -> list[int]:
+    if mode == "major":
+        return get_scale(tonic, "major")
+
+    return get_scale(tonic, "natural_minor")
+
+
+def scales_for_key(tonic: int, mode: str = "major") -> list[str]:
+    """Return useful scales for a key."""
+    tonic = tonic % 12
+
+    if mode == "major":
+        return [
+            "major",
+            "major_pentatonic",
+            "natural_minor",
+            "minor_pentatonic",
+        ]
+
+    return [
+        "natural_minor",
+        "minor_pentatonic",
+        "harmonic_minor",
+        "major",
+    ]
+
+
+def scales_for_chord(root: int, suffix: str) -> list[str]:
+    """Return useful scale names for a chord."""
+    root = root % 12
+
+    if suffix == "7":
+        return [
+            "mixolydian",
+            "major_pentatonic",
+        ]
+
+    if suffix == "maj7":
+        return [
+            "major",
+            "lydian",
+            "major_pentatonic",
+        ]
+
+    if suffix in ("m", "m7"):
+        return [
+            "natural_minor",
+            "dorian",
+            "minor_pentatonic",
+        ]
+
+    if suffix in ("dim", "dim7", "m7b5"):
+        return [
+            "locrian",
+            "harmonic_minor",
+        ]
+
+    if suffix == "7sus4":
+        return [
+            "mixolydian",
+            "major_pentatonic",
+        ]
+
+    if suffix in ("6", "m6"):
+        if suffix == "m6":
+            return [
+                "dorian",
+                "melodic_minor",
+                "minor_pentatonic",
+            ]
+
+        return [
+            "major",
+            "major_pentatonic",
+            "lydian",
+        ]
+
+    if suffix == "sus2" or suffix == "sus4":
+        return [
+            "major",
+            "mixolydian",
+            "major_pentatonic",
+        ]
+
+    if suffix == "aug":
+        return [
+            "whole_tone",
+            "lydian",
+        ]
+
+    return [
+        "major",
+        "major_pentatonic",
+    ]

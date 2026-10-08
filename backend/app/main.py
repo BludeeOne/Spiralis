@@ -1,4 +1,4 @@
-"""Spiralis API
+"""Spiralis API.
 
 Run from backend/:  uvicorn app.main:app --reload
 Demo:               http://localhost:8000/
@@ -27,9 +27,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-from app.routes.analyze import router as analyze_router
-app.include_router(analyze_router)
 
 
 @app.get("/", include_in_schema=False)
@@ -66,8 +63,7 @@ def analyze_audio(file: UploadFile):
 
     try:
         theory = theory_bridge.analyze(
-            [f.pitch_classes for f in features.frames],
-            key_hint=f"{features.essentia_key.key} {features.essentia_key.scale}",
+            [{"pcs": f.pitch_classes, "bass": f.bass} for f in features.frames]
         )
         status = "ok"
     except NotImplementedError as e:
@@ -79,9 +75,13 @@ def analyze_audio(file: UploadFile):
 @app.post("/analyze/written", response_model=TheoryResult)
 def analyze_written(body: WrittenInput):
     try:
-        pitch_sets = theory_bridge.parse_written(body.chords)
-        return theory_bridge.analyze(pitch_sets)
+        return theory_bridge.analyze_written(body.chords)
     except NotImplementedError as e:
         raise HTTPException(501, str(e)) from e
     except (KeyError, ValueError) as e:  # bad note name from pitch_of
         raise HTTPException(422, f"Invalid note: {e}") from e
+
+
+from app.routes.analyze import router as analyze_router  # noqa: E402
+
+app.include_router(analyze_router)

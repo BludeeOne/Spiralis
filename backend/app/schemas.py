@@ -1,5 +1,15 @@
-"""schemas file
-description: a running list of everything this engine should support"""
+"""
+schemas.py — the contract between backend and frontend.
+
+Pydantic models for everything that crosses the wire. The frontend panels read
+these field names directly, so renaming a field here is a breaking change for
+the components in frontend/src/components/ (and types.ts mirrors them).
+
+Conventions
+  - Pitch classes are ints 0–11 with C = 0. Names are added only at the edge.
+  - `pending` lists theory functions that raised NotImplementedError, so the UI
+    can say "waiting on chords.identify" instead of showing blank boxes.
+"""
 from pydantic import BaseModel, Field
 
 
@@ -14,6 +24,7 @@ class BeatFrame(BaseModel):
     end: float
     chroma: list[float]              # 12 values, index 0 = C
     pitch_classes: list[int]         # active notes, 0-11, at most 5 to reduce computation time
+    bass: int | None = None          # lowest strong pitch class, if detected
 
 
 class AudioFeatures(BaseModel):
@@ -23,13 +34,19 @@ class AudioFeatures(BaseModel):
     essentia_key: KeyEstimate        # cross-check
 
 
+class KeyInfo(BaseModel):
+    tonic: int
+    mode: str                        # "major" | "minor"
+    name: str                        # "Bb major"
+    relative: str                    # "G minor"
+
+
 class TheoryResult(BaseModel):
-    key: str | None = None
-    progression: list[str] = Field(default_factory=list)       # e.g. ["I", "V", "vi", "IV"]
-    chords: list[str] = Field(default_factory=list)            # e.g. ["C", "G", "Am", "F"]
-    scales: list[str] = Field(default_factory=list)            # e.g. ["Major Pentatonic"]
-    related_chords: list[str] = Field(default_factory=list)    # circle-of-fifths neighbors
-    next_chords: list[str] = Field(default_factory=list)       # possible song paths
+    key: KeyInfo | None = None
+    history: list[dict] = Field(default_factory=list)          # [{root, suffix, name, ...}] chord changes
+    progression: list[str | None] = Field(default_factory=list)  # e.g. ["I", "V", "vi", "IV"]
+    suggestions: list[dict] = Field(default_factory=list)      # [{root, suffix, name, numeral}]
+    scales: list[dict] = Field(default_factory=list)           # [{root, type, name}]
 
 
 class AnalysisResponse(BaseModel):
@@ -40,4 +57,4 @@ class AnalysisResponse(BaseModel):
 
 class WrittenInput(BaseModel):
     #incase theyd rather just write intheir song without having to play it
-    chords: list[list[str]] = Field(min_length=1)
+    chords: list[str] = Field(min_length=1)   # chord names, e.g. ["C", "G7", "Am", "F"]

@@ -29,7 +29,7 @@ export function yin(buf: Float32Array, sr: number, threshold = 0.15): number | n
   }
   if (tau > maxLag) return null
 
-  // parabolic interpolation around the minimum
+  //parabolic interpolation around the minimum
   const a = cmnd[tau - 1], b = cmnd[tau], c = tau + 1 <= maxLag ? cmnd[tau + 1] : b
   const denom = a - 2 * b + c
   const shift = denom ? (a - c) / (2 * denom) : 0

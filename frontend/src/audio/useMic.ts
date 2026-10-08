@@ -15,7 +15,7 @@ function describe(err: unknown): string {
   return err instanceof Error ? err.message : String(err)
 }
 
-/** Opens the mic, exposes an AnalyserNode for the tuner, and emits WAV chunks every `chunkSec`. */
+// Opens the mic and exposes an AnalyserNode for the tuner, then emits WAV chunks every `chunkSec`
 export function useMic(onChunk: (wav: Blob) => void, chunkSec = 2) {
   const [listening, setListening] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -37,7 +37,7 @@ export function useMic(onChunk: (wav: Blob) => void, chunkSec = 2) {
   const start = useCallback(async () => {
     setError(null)
     try {
-      // Voice processing off: it mangles sustained guitar notes.
+      //Voice processing is off cuase it mangles sustained guitar notes
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
       })
