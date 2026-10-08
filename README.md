@@ -1,10 +1,10 @@
 # Spiralis
 
-A one-stop shop for aspiring musicians, accomplished songwriters, and anyone who wants to play around in a musical playground.
+A one-stop shop for aspiring musicians, accomplished songwriters, and anyone who wants to mess around in a musical playground.
 
-Play your guitar into your mic and **Spiralis** tells you what you're playing — the notes, the chord, the key, and everything that comes with it: scales, diatonic chords, circle-of-fifths neighbors, where the progression can go next, and even different ways to finger it on a guitar neck.
+Play your guitar into your mic and **Spiralis** tells you what you're playing -> the notes, the chord, the key, and everything that comes with it: scales, diatonic chords, circle-of-fifths neighbors, where the progression can go next, and even different ways to finger it on a guitar neck
 
-Each source file opens with a header explaining the science behind it. This README focuses on the path through the program. Follow the tree, then open whichever file you are curious about.
+Each source file opens with a header explaining the science behind it. This README focuses on the path through the program. Follow the tree, then open whichever file you are curious about
 
 ---
 
@@ -55,7 +55,7 @@ At a high level, the program takes the sound from your guitar, turns it into num
 ```text
 Guitar / microphone
         │
-        ▼
+        
 ┌─────────────────────────────────────────────────────────────┐
 │ FRONTEND — React + Vite (:5173)                             │
 │                                                             │
@@ -70,7 +70,7 @@ Guitar / microphone
 └─────────────────────────────────────────────────────────────┘
         │
         │ POST /api/analyze
-        ▼
+        
 ┌─────────────────────────────────────────────────────────────┐
 │ BACKEND — FastAPI + Uvicorn (:8000)                         │
 │                                                             │
@@ -86,7 +86,7 @@ Guitar / microphone
 │             (all Essentia processing happens here)           │
 │                                                             │
 │             ├── decode                                       │
-│             │   WAV bytes → mono float32                    │
+│             │   WAV bytes -> mono float32                    │
 │             │                                                │
 │             ├── frame + window                               │
 │             │   Blackman-Harris 62                           │
@@ -95,7 +95,7 @@ Guitar / microphone
 │             │   FFT magnitude for each frame                │
 │             │                                                │
 │             ├── spectral peaks                               │
-│             │   strongest partials → peak_hz                 │
+│             │   strongest partials -> peak_hz                 │
 │             │                                                │
 │             ├── chroma (HPCP)                                │
 │             │   12 pitch-class bins, rolled so C = 0         │
@@ -113,7 +113,7 @@ Guitar / microphone
 │             from 0–11. No actual note names yet.             │
 │                                                             │
 │          2. theory_bridge.py                                 │
-│             NUMBERS → MEANING                                │
+│             NUMBERS -> MEANING                                │
 │             (the only door into theory/)                     │
 │                                                             │
 │             └── theory/                                      │
@@ -121,7 +121,7 @@ Guitar / microphone
 │                 │   pitch class ↔ note name + spelling       │
 │                 │                                            │
 │                 ├── chords.py                               │
-│                 │   pitch-class set → chord name             │
+│                 │   pitch-class set -> chord name             │
 │                 │                                            │
 │                 ├── scales.py                               │
 │                 │   modes and scales that fit                │
@@ -142,7 +142,7 @@ Guitar / microphone
 └─────────────────────────────────────────────────────────────┘
         │
         │ JSON
-        ▼
+        
 ┌─────────────────────────────────────────────────────────────┐
 │ FRONTEND                                                    │
 │                                                             │
@@ -161,32 +161,32 @@ Guitar / microphone
 
 ## The Short Version
 
-If you don't want to follow the whole diagram, the basic idea is:
+If you don't want to follow the whole diagram the basic idea is:
 
 ```text
 Sound
-  ↓
+  
 Microphone
-  ↓
+  
 ~2 second WAV chunk
-  ↓
+  
 audio/detection.py
-  ↓
-FFT → peaks → HPCP → beats → pitch classes
-  ↓
+  
+FFT -> peaks -> HPCP -> beats -> pitch classes
+  
 theory_bridge.py
-  ↓
-notes → chord → key → scales → progressions → fingerings
-  ↓
+  
+notes -> chord -> key -> scales ->progressions -> fingerings
+  
 JSON response
-  ↓
+  
 React frontend
-  ↓
+  
 You see what you're playing
 ```
 
-The important separation is that **`detection.py` does not try to name chords**. It turns the audio into useful numbers.
+The important separation is that `detection.py` does not try to name chords. It turns the audio into frequencies/numbers
 
-Then **`theory_bridge.py` takes those numbers and gives them musical meaning**.
+Then `theory_bridge.py` takes those numbers and gives them musical names
 
-That keeps the audio processing and music theory parts of Spiralis separate, which makes each side easier to work on and debug.
+
