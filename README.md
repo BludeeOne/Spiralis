@@ -1,10 +1,10 @@
 # Spiralis
 
-A one-stop shop for aspiring musicians, accomplished songwriters, and anyone who wants to play around in a musical playground.
+A one-stop shop for aspiring musicians, accomplished songwriters, and anyone who wants to mess around in a musical playground.
 
-Play your guitar into your mic and **Spiralis** tells you what you're playing: the notes, the chord, the key, and everything that comes with it. That means scales, diatonic chords, circle-of-fifths neighbors, where the progression can go next, and different ways to finger it on a guitar neck.
+Play your guitar into your mic and **Spiralis** tells you what you're playing -> the notes, the chord, the key, and everything that comes with it: scales, diatonic chords, circle-of-fifths neighbors, where the progression can go next, and even different ways to finger it on a guitar neck
 
-Each source file opens with a header explaining the science behind it. This README covers the path through the program. Follow it, then open whichever file you're curious about.
+Each source file opens with a header explaining the science behind it. This README focuses on the path through the program. Follow the tree, then open whichever file you are curious about
 
 ---
 
@@ -51,28 +51,109 @@ Then open **http://localhost:5173**.
 
 Spiralis takes the sound from your guitar, turns it into numbers, interprets those numbers as music theory, and sends the results back to the browser.
 
-```mermaid
-flowchart TD
-    A["🎸 Guitar / mic"] --> B
-
-    subgraph FE1["Frontend · React + Vite"]
-        B["useMic.ts<br/>mic in, ~2 s chunks"] --> C["wav.ts<br/>encode as WAV"]
-    end
-
-    C -- "POST /api/analyze" --> D
-
-    subgraph BE["Backend · FastAPI + Uvicorn"]
-        D["routes/analyze.py<br/>the conductor"] --> E["audio/detection.py<br/>signal → numbers"]
-        E --> F["theory_bridge.py<br/>numbers → meaning"]
-        F --> G["theory/<br/>notes · chords · scales · keys<br/>progressions · fingerings"]
-        G --> H["schemas.py<br/>shape the response"]
-    end
-
-    H -- JSON --> I
-
-    subgraph FE2["Frontend"]
-        I["App.tsx"] --> J["Key · Chord · Progression<br/>Suggested · Scales · Timeline · Tuner"]
-    end
+```text
+Guitar / microphone
+        │
+        
+┌─────────────────────────────────────────────────────────────┐
+│ FRONTEND — React + Vite (:5173)                             │
+│                                                             │
+│  micCapture.tsx                                             │
+│      │                                                      │
+│      ├── getUserMedia()                                     │
+│      │     Microphone input with voice processing OFF       │
+│      │     (echo cancellation / noise suppression can       │
+│      │      interfere with pitch detection)                 │
+│      │                                                      │
+│      └── encode ~2 second audio chunk as WAV                │
+└─────────────────────────────────────────────────────────────┘
+        │
+        │ POST /api/analyze
+        
+┌─────────────────────────────────────────────────────────────┐
+│ BACKEND — FastAPI + Uvicorn (:8000)                         │
+│                                                             │
+│  main.py                                                    │
+│  └── app, CORS, and router setup                            │
+│                                                             │
+│      routes/analyze.py                                      │
+│      └── The conductor: sends the audio through             │
+│          detection first, then theory                       │
+│                                                             │
+│          1. audio/detection.py                              │
+│             SIGNAL → NUMBERS                                │
+│             (all Essentia processing happens here)           │
+│                                                             │
+│             ├── decode                                       │
+│             │   WAV bytes -> mono float32                    │
+│             │                                                │
+│             ├── frame + window                               │
+│             │   Blackman-Harris 62                           │
+│             │                                                │
+│             ├── spectrum                                     │
+│             │   FFT magnitude for each frame                │
+│             │                                                │
+│             ├── spectral peaks                               │
+│             │   strongest partials -> peak_hz                 │
+│             │                                                │
+│             ├── chroma (HPCP)                                │
+│             │   12 pitch-class bins, rolled so C = 0         │
+│             │                                                │
+│             ├── beats                                        │
+│             │   beat grid + BPM                              │
+│             │                                                │
+│             ├── beat synchronization                         │
+│             │   average chroma between beats                 │
+│             │                                                │
+│             └── pitch-class sets                              │
+│                 bins >= 0.5 → {0, 4, 7}, etc.                │
+│                                                             │
+│             At this point they are still just numbers        │
+│             from 0–11. No actual note names yet.             │
+│                                                             │
+│          2. theory_bridge.py                                 │
+│             NUMBERS -> MEANING                                │
+│             (the only door into theory/)                     │
+│                                                             │
+│             └── theory/                                      │
+│                 ├── notes.py                                │
+│                 │   pitch class ↔ note name + spelling       │
+│                 │                                            │
+│                 ├── chords.py                               │
+│                 │   pitch-class set -> chord name             │
+│                 │                                            │
+│                 ├── scales.py                               │
+│                 │   modes and scales that fit                │
+│                 │                                            │
+│                 ├── circle_of_fifths.py                     │
+│                 │   key + nearby keys                        │
+│                 │                                            │
+│                 ├── progressions.py                          │
+│                 │   Roman numerals + possible next chords    │
+│                 │                                            │
+│                 └── fingerings.py                            │
+│                     guitar chord / scale voicings            │
+│                                                             │
+│  schemas.py                                                  │
+│  └── Shapes the final response:                              │
+│      notes, chord, key, roman, scales, suggestions,         │
+│      bpm, peak_hz, chroma, pending                           │
+└─────────────────────────────────────────────────────────────┘
+        │
+        │ JSON
+        
+┌─────────────────────────────────────────────────────────────┐
+│ FRONTEND                                                    │
+│                                                             │
+│  livePanel                                                  │
+│  └── notes · chord · key · BPM · chroma bars                │
+│                                                             │
+│  circleOfFifths                                             │
+│  └── current key + nearby keys highlighted                  │
+│                                                             │
+│  guitarNeck                                                 │
+│  └── scale / chord shapes displayed on the fretboard        │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ### The short version
@@ -90,37 +171,34 @@ The important separation: **`detection.py` never names a chord.** It only produc
 
 ---
 
-## Project layout
+## The Short Version
+
+If you don't want to follow the whole diagram the basic idea is:
 
 ```text
-backend/
-├── requirements.txt
-├── app/
-│   ├── main.py              app, CORS, router setup
-│   ├── schemas.py           response shapes
-│   ├── theory_bridge.py     numbers → music theory
-│   ├── routes/
-│   │   └── analyze.py       POST /api/analyze: detection, then theory
-│   └── audio/
-│       └── detection.py     all Essentia processing
-└── theory/
-    ├── notes.py             pitch class ↔ note name + spelling
-    ├── chords.py            pitch-class set → chord name
-    ├── scales.py            modes and scales that fit
-    ├── circle_of_fifths.py  key + nearby keys
-    ├── progressions.py      Roman numerals + likely next chords
-    └── fingerings.py        guitar chord and scale voicings
-
-frontend/src/
-├── main.tsx                 mounts <App />
-├── App.tsx                  layout + the analyze loop
-├── api.ts                   POSTs each chunk to the backend
-├── types.ts                 shared response types
-├── audio/
-│   ├── useMic.ts            mic capture, ~2 s chunks
-│   ├── wav.ts               Float32 → WAV
-│   └── pitch.ts             frequency → note + cents for the tuner
-└── components/              one file per panel
+Sound
+  
+Microphone
+  
+~2 second WAV chunk
+  
+audio/detection.py
+  
+FFT -> peaks -> HPCP -> beats -> pitch classes
+  
+theory_bridge.py
+  
+notes -> chord -> key -> scales ->progressions -> fingerings
+  
+JSON response
+  
+React frontend
+  
+You see what you're playing
 ```
 
-See [`docs/relevantResearch.md`](docs/relevantResearch.md) for background reading.
+The important separation is that `detection.py` does not try to name chords. It turns the audio into frequencies/numbers
+
+Then `theory_bridge.py` takes those numbers and gives them musical names
+
+
