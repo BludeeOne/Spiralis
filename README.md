@@ -2,17 +2,17 @@
 
 A one-stop shop for aspiring musicians, accomplished songwriters, and anyone who wants to play around in a musical playground.
 
-Play your guitar into your mic and **Spiralis** tells you what you're playing — the notes, the chord, the key, and everything that comes with it: scales, diatonic chords, circle-of-fifths neighbors, where the progression can go next, and even different ways to finger it on a guitar neck.
+Play your guitar into your mic and **Spiralis** tells you what you're playing: the notes, the chord, the key, and everything that comes with it. That means scales, diatonic chords, circle-of-fifths neighbors, where the progression can go next, and different ways to finger it on a guitar neck.
 
-Each source file opens with a header explaining the science behind it. This README focuses on the path through the program. Follow the tree, then open whichever file you are curious about.
+Each source file opens with a header explaining the science behind it. This README covers the path through the program. Follow it, then open whichever file you're curious about.
 
 ---
 
-## Running Spiralis Locally
+## Running Spiralis locally
 
 You need **two terminals**: one for the backend and one for the frontend.
 
-### Backend — FastAPI on `:8000`
+### Backend: FastAPI on `:8000`
 
 ```bash
 cd backend
@@ -22,13 +22,13 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-The next time you run the project, you can use:
+After the first setup, one line is enough:
 
 ```bash
 cd backend && source .venv/bin/activate && uvicorn app.main:app --reload
 ```
 
-### Frontend — Vite on `:5173`
+### Frontend: Vite on `:5173`
 
 In a second terminal:
 
@@ -38,155 +38,89 @@ npm install
 npm run dev
 ```
 
-Then open:
+Then open **http://localhost:5173**.
 
-**http://localhost:5173**
-
-The browser will need microphone access. It doesn't always ask for permission immediately, but pressing the **Play** button will trigger the microphone request if permission has not already been given.
-
-The Vite frontend proxies `/api` requests to the backend, so the backend needs to be running first.
-
----
-
-# The Pipeline Through Spiralis
-
-At a high level, the program takes the sound from your guitar, turns it into numbers, interprets those numbers as music theory, and sends the results back to the frontend.
-
-```text
-Guitar / microphone
-        │
-        ▼
-┌─────────────────────────────────────────────────────────────┐
-│ FRONTEND — React + Vite (:5173)                             │
-│                                                             │
-│  micCapture.tsx                                             │
-│      │                                                      │
-│      ├── getUserMedia()                                     │
-│      │     Microphone input with voice processing OFF       │
-│      │     (echo cancellation / noise suppression can       │
-│      │      interfere with pitch detection)                 │
-│      │                                                      │
-│      └── encode ~2 second audio chunk as WAV                │
-└─────────────────────────────────────────────────────────────┘
-        │
-        │ POST /api/analyze
-        ▼
-┌─────────────────────────────────────────────────────────────┐
-│ BACKEND — FastAPI + Uvicorn (:8000)                         │
-│                                                             │
-│  main.py                                                    │
-│  └── app, CORS, and router setup                            │
-│                                                             │
-│      routes/analyze.py                                      │
-│      └── The conductor: sends the audio through             │
-│          detection first, then theory                       │
-│                                                             │
-│          1. audio/detection.py                              │
-│             SIGNAL → NUMBERS                                │
-│             (all Essentia processing happens here)           │
-│                                                             │
-│             ├── decode                                       │
-│             │   WAV bytes → mono float32                    │
-│             │                                                │
-│             ├── frame + window                               │
-│             │   Blackman-Harris 62                           │
-│             │                                                │
-│             ├── spectrum                                     │
-│             │   FFT magnitude for each frame                │
-│             │                                                │
-│             ├── spectral peaks                               │
-│             │   strongest partials → peak_hz                 │
-│             │                                                │
-│             ├── chroma (HPCP)                                │
-│             │   12 pitch-class bins, rolled so C = 0         │
-│             │                                                │
-│             ├── beats                                        │
-│             │   beat grid + BPM                              │
-│             │                                                │
-│             ├── beat synchronization                         │
-│             │   average chroma between beats                 │
-│             │                                                │
-│             └── pitch-class sets                              │
-│                 bins >= 0.5 → {0, 4, 7}, etc.                │
-│                                                             │
-│             At this point they are still just numbers        │
-│             from 0–11. No actual note names yet.             │
-│                                                             │
-│          2. theory_bridge.py                                 │
-│             NUMBERS → MEANING                                │
-│             (the only door into theory/)                     │
-│                                                             │
-│             └── theory/                                      │
-│                 ├── notes.py                                │
-│                 │   pitch class ↔ note name + spelling       │
-│                 │                                            │
-│                 ├── chords.py                               │
-│                 │   pitch-class set → chord name             │
-│                 │                                            │
-│                 ├── scales.py                               │
-│                 │   modes and scales that fit                │
-│                 │                                            │
-│                 ├── circle_of_fifths.py                     │
-│                 │   key + nearby keys                        │
-│                 │                                            │
-│                 ├── progressions.py                          │
-│                 │   Roman numerals + possible next chords    │
-│                 │                                            │
-│                 └── fingerings.py                            │
-│                     guitar chord / scale voicings            │
-│                                                             │
-│  schemas.py                                                  │
-│  └── Shapes the final response:                              │
-│      notes, chord, key, roman, scales, suggestions,         │
-│      bpm, peak_hz, chroma, pending                           │
-└─────────────────────────────────────────────────────────────┘
-        │
-        │ JSON
-        ▼
-┌─────────────────────────────────────────────────────────────┐
-│ FRONTEND                                                    │
-│                                                             │
-│  livePanel                                                  │
-│  └── notes · chord · key · BPM · chroma bars                │
-│                                                             │
-│  circleOfFifths                                             │
-│  └── current key + nearby keys highlighted                  │
-│                                                             │
-│  guitarNeck                                                 │
-│  └── scale / chord shapes displayed on the fretboard        │
-└─────────────────────────────────────────────────────────────┘
-```
+> [!NOTE]
+> Start the backend first. Vite proxies `/api` requests to it, so the frontend has nothing to talk to otherwise.
+>
+> The browser needs microphone access. It doesn't always ask right away, but pressing **Play** triggers the permission prompt.
 
 ---
 
-## The Short Version
+## How it works
 
-If you don't want to follow the whole diagram, the basic idea is:
+Spiralis takes the sound from your guitar, turns it into numbers, interprets those numbers as music theory, and sends the results back to the browser.
 
-```text
-Sound
-  ↓
-Microphone
-  ↓
-~2 second WAV chunk
-  ↓
-audio/detection.py
-  ↓
-FFT → peaks → HPCP → beats → pitch classes
-  ↓
-theory_bridge.py
-  ↓
-notes → chord → key → scales → progressions → fingerings
-  ↓
-JSON response
-  ↓
-React frontend
-  ↓
-You see what you're playing
+```mermaid
+flowchart TD
+    A["🎸 Guitar / mic"] --> B
+
+    subgraph FE1["Frontend · React + Vite"]
+        B["useMic.ts<br/>mic in, ~2 s chunks"] --> C["wav.ts<br/>encode as WAV"]
+    end
+
+    C -- "POST /api/analyze" --> D
+
+    subgraph BE["Backend · FastAPI + Uvicorn"]
+        D["routes/analyze.py<br/>the conductor"] --> E["audio/detection.py<br/>signal → numbers"]
+        E --> F["theory_bridge.py<br/>numbers → meaning"]
+        F --> G["theory/<br/>notes · chords · scales · keys<br/>progressions · fingerings"]
+        G --> H["schemas.py<br/>shape the response"]
+    end
+
+    H -- JSON --> I
+
+    subgraph FE2["Frontend"]
+        I["App.tsx"] --> J["Key · Chord · Progression<br/>Suggested · Scales · Timeline · Tuner"]
+    end
 ```
 
-The important separation is that **`detection.py` does not try to name chords**. It turns the audio into useful numbers.
+### The short version
 
-Then **`theory_bridge.py` takes those numbers and gives them musical meaning**.
+| Step | Where | What happens |
+|---|---|---|
+| 1 | `frontend/src/audio/useMic.ts` | Opens the mic with voice processing **off** (echo cancellation and noise suppression distort sustained notes) and buffers ~2 s of audio |
+| 2 | `frontend/src/audio/wav.ts` | Encodes the chunk as a WAV file and sends it to `/api/analyze` |
+| 3 | `backend/app/audio/detection.py` | Turns audio into numbers with Essentia: FFT → spectral peaks → chroma (HPCP) → beats → pitch-class sets like `{0, 4, 7}` |
+| 4 | `backend/app/theory_bridge.py` | Hands those numbers to `theory/`, which names the notes, chord, key, scales, Roman numerals, next-chord suggestions, and fingerings |
+| 5 | `backend/app/schemas.py` | Shapes everything into one JSON response |
+| 6 | `frontend/src/App.tsx` | Fans the response out to each panel on screen |
 
-That keeps the audio processing and music theory parts of Spiralis separate, which makes each side easier to work on and debug.
+The important separation: **`detection.py` never names a chord.** It only produces numbers 0–11. **`theory_bridge.py` is the only door into `theory/`**, and that's where the numbers become music. 
+
+---
+
+## Project layout
+
+```text
+backend/
+├── requirements.txt
+├── app/
+│   ├── main.py              app, CORS, router setup
+│   ├── schemas.py           response shapes
+│   ├── theory_bridge.py     numbers → music theory
+│   ├── routes/
+│   │   └── analyze.py       POST /api/analyze: detection, then theory
+│   └── audio/
+│       └── detection.py     all Essentia processing
+└── theory/
+    ├── notes.py             pitch class ↔ note name + spelling
+    ├── chords.py            pitch-class set → chord name
+    ├── scales.py            modes and scales that fit
+    ├── circle_of_fifths.py  key + nearby keys
+    ├── progressions.py      Roman numerals + likely next chords
+    └── fingerings.py        guitar chord and scale voicings
+
+frontend/src/
+├── main.tsx                 mounts <App />
+├── App.tsx                  layout + the analyze loop
+├── api.ts                   POSTs each chunk to the backend
+├── types.ts                 shared response types
+├── audio/
+│   ├── useMic.ts            mic capture, ~2 s chunks
+│   ├── wav.ts               Float32 → WAV
+│   └── pitch.ts             frequency → note + cents for the tuner
+└── components/              one file per panel
+```
+
+See [`docs/relevantResearch.md`](docs/relevantResearch.md) for background reading.
