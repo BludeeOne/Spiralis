@@ -17,15 +17,18 @@ You need **two terminals**: one for the backend and one for the frontend.
 ```bash
 cd backend
 python3 -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
+source .venv/bin/activate
+        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-After the first setup, one line is enough:
+After the first setup,
 
 ```bash
-cd backend && source .venv/bin/activate && uvicorn app.main:app --reload
+cd backend 
+source .venv/bin/activate 
+uvicorn app.main:app --reload
 ```
 
 ### Frontend: Vite on `:5173`
@@ -35,6 +38,10 @@ In a second terminal:
 ```bash
 cd frontend
 npm install
+npm run dev
+```
+After the first setup,
+```bash
 npm run dev
 ```
 

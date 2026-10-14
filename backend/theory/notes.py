@@ -51,7 +51,7 @@ NOTES: list[Note] = [
 
 LETTERS = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
 
-# Tonics whose normal key signatures use flats.
+#tonics whose normal key signatures use flats
 FLAT_MAJOR = {5, 10, 3, 8, 1}
 FLAT_MINOR = {7, 0, 5, 10, 3, 2}
 

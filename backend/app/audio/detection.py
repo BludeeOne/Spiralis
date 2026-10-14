@@ -127,22 +127,22 @@ def chroma_frames(
     spectrum = es.Spectrum()
 
     peaks = es.SpectralPeaks(
-        orderBy="magnitude",
-        magnitudeThreshold=1e-5,
-        minFrequency=40,
-        maxFrequency=5000,
-        maxPeaks=100,
-        sampleRate=SAMPLE_RATE,
+        orderBy="magnitude",         # Sort peaks from strongest to weakest
+        magnitudeThreshold=1e-5,      # Ignore peaks below this magnitude
+        minFrequency=40,              # Ignore frequencies below 40 Hz
+        maxFrequency=5000,            # Ignore frequencies above 5000 Hz
+        maxPeaks=100,                 # Keep up to 100 spectral peaks
+        sampleRate=SAMPLE_RATE,       # Use sample rate
     )
 
     hpcp = es.HPCP(
-        size=12,
-        referenceFrequency=440,
-        harmonics=0,
-        minFrequency=40,
-        maxFrequency=5000,
-        sampleRate=SAMPLE_RATE,
-    )
+        size=12,                      # Use 12 pitch classes, one for each note
+        referenceFrequency=440,       # Use A4 (440 Hz) as the tuning reference, possible change?
+        harmonics=0,                  # Don't add extra harmonic weighting - caused misidentification
+        minFrequency=40,              
+        maxFrequency=5000,             
+        sampleRate=SAMPLE_RATE,       
+    )   
 
     rms = es.RMS()
 
