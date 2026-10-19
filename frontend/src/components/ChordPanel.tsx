@@ -19,10 +19,14 @@ export function ChordPanel({ live, notes, selected, listening, pending }: Props)
         <p className="chord-name" key={name}>{name}</p>
       ) : pending && notes.length ? (
         <Pending fn="identify_chord" />
+      ) : notes.length ? (
+        //fewer than 3 notes (single note, power chord) or no chord match:
+        //show what was heard instead of falling back to "Listening…"
+        <p className="chord-name notes-only" key={notes.join()}>{notes.join(' ')}</p>
       ) : (
         <p className="empty">{listening ? 'Listening…' : 'Press play and strum'}</p>
       )}
-      {!selected && notes.length > 0 && <p className="notes">{notes.join('  ')}</p>}
+      {!selected && name && notes.length > 0 && <p className="notes">{notes.join('  ')}</p>}
     </Panel>
   )
 }

@@ -26,11 +26,26 @@ function describe(err: unknown): string {
   return err instanceof Error ? err.message : String(err)
 }
 
-//ppens the mic and exposes an AnalyserNode for the tuner, then emits WAV chunks every `chunkSec`
-export function useMic(onChunk: (wav: Blob) => void, chunkSec = 2) {
+const GATE_DB = 6         // window must be this many dB above the noise floor
+const FLOOR_SEC = 15      // noise floor = quietest moment in this much recent audio
+const FLOOR_CAP = 2e-3    // room hiss with AGC off sits well under this (~-54 dBFS)
+const ABS_FLOOR = 1e-4    // never treat anything quieter than this (~-80 dBFS) as signal
+const TARGET_PEAK = 0.5   // normalize sent windows to this peak
+const MAX_GAIN = 40       // don't boost more than +32 dB (would just amplify hiss)
+
+const rmsOf = (x: Float32Array) => {
+  let s = 0
+  for (let i = 0; i < x.length; i++) s += x[i] * x[i]
+  return Math.sqrt(s / x.length)
+}
+
+//opens the mic and exposes an AnalyserNode for the tuner, then emits a WAV of the
+//last `windowSec` of audio every `hopSec` (when there's something to hear)
+export function useMic(onChunk: (wav: Blob) => void, windowSec = 1.5, hopSec = 0.5) {
   const [listening, setListening] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null)
+  const [level, setLevel] = useState<{ db: number; open: boolean }>({ db: -Infinity, open: false })
   const ctxRef = useRef<AudioContext | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const onChunkRef = useRef(onChunk)
@@ -43,6 +58,7 @@ export function useMic(onChunk: (wav: Blob) => void, chunkSec = 2) {
     ctxRef.current = null
     setAnalyser(null)
     setListening(false)
+    setLevel({ db: -Infinity, open: false })
   }, [])
 
   const start = useCallback(async () => {
@@ -69,19 +85,48 @@ export function useMic(onChunk: (wav: Blob) => void, chunkSec = 2) {
       mute.gain.value = 0 // keeps the worklet pulled by the graph without playing the mic back
       src.connect(tap).connect(mute).connect(ctx.destination)
 
-      let parts: Float32Array[] = []
-      let len = 0
-      const target = Math.round(ctx.sampleRate * chunkSec)
+      //ring buffer holding the most recent `windowSec` of audio
+      const size = Math.round(ctx.sampleRate * windowSec)
+      const hop = Math.round(ctx.sampleRate * hopSec)
+      const ring = new Float32Array(size)
+      let write = 0      // next write position in ring
+      let filled = 0     // samples written so far (caps at size)
+      let sinceHop = 0
+      const recent: number[] = []   // per-hop RMS history for the noise floor
+      const floorHops = Math.ceil(FLOOR_SEC / hopSec)
+      const gate = Math.pow(10, GATE_DB / 20)
+
       tap.port.onmessage = (e: MessageEvent<Float32Array>) => {
-        parts.push(e.data)
-        len += e.data.length
-        if (len < target) return
-        const all = new Float32Array(len)
-        let o = 0
-        for (const p of parts) { all.set(p, o); o += p.length }
-        parts = []
-        len = 0
-        onChunkRef.current(encodeWav(all, ctx.sampleRate))
+        const block = e.data
+        for (let i = 0; i < block.length; i++) {
+          ring[write] = block[i]
+          write = (write + 1) % size
+        }
+        filled = Math.min(size, filled + block.length)
+        sinceHop += block.length
+        if (sinceHop < hop || filled < size) return
+        sinceHop = 0
+
+        //unroll ring into chronological order
+        const win = new Float32Array(size)
+        win.set(ring.subarray(write), 0)
+        win.set(ring.subarray(0, write), size - write)
+
+        //noise floor = quietest hop in the last FLOOR_SEC, capped so a song that
+        //never pauses can't drag the floor up to the music's own level
+        const r = rmsOf(win.subarray(size - hop))
+        recent.push(r)
+        if (recent.length > floorHops) recent.shift()
+        const floor = Math.min(FLOOR_CAP, ...recent)
+        const open = rmsOf(win) > Math.max(ABS_FLOOR, floor * gate)
+        setLevel({ db: 20 * Math.log10(Math.max(r, 1e-6)), open })
+        if (!open) return
+
+        let peak = 0
+        for (let i = 0; i < size; i++) peak = Math.max(peak, Math.abs(win[i]))
+        const g = Math.min(MAX_GAIN, TARGET_PEAK / Math.max(peak, 1e-6))
+        if (g > 1) for (let i = 0; i < size; i++) win[i] *= g
+        onChunkRef.current(encodeWav(win, ctx.sampleRate))
       }
 
       setAnalyser(an)
@@ -90,9 +135,9 @@ export function useMic(onChunk: (wav: Blob) => void, chunkSec = 2) {
       setError(describe(err))
       stop()
     }
-  }, [chunkSec, stop])
+  }, [windowSec, hopSec, stop])
 
   useEffect(() => stop, [stop])
 
-  return { listening, error, analyser, start, stop }
+  return { listening, error, analyser, level, start, stop }
 }

@@ -50,7 +50,14 @@ export default function App() {
       <header className="top">
         <h1 className="wordmark">Spiralis</h1>
         <p className="status" aria-live="polite">
-          {mic.listening ? <><i className="dot live" /> Listening</> : <><i className="dot" /> Not listening</>}
+          {mic.listening ? <><i className="dot live" /> {mic.level.open ? 'Hearing sound' : 'Listening'}</> : <><i className="dot" /> Not listening</>}
+          {mic.listening && (
+            //input meter: -80…-20 dBFS. Gold once the noise gate opens, so you can tell
+            //"mic hears nothing" apart from "mic hears it but no chord matched"
+            <span className={`meter ${mic.level.open ? 'open' : ''}`} aria-hidden="true">
+              <i style={{ width: `${Math.max(0, Math.min(100, ((mic.level.db + 80) / 60) * 100))}%` }} />
+            </span>
+          )}
         </p>
         <button className="ghost" onClick={reset} disabled={!history.length}>Clear session</button>
       </header>

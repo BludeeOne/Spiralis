@@ -6,6 +6,7 @@
   --muted: #9b98c6;      /* lavender grey */
   --gold: #e6b450;       /* accent: in tune, live, selected */
   --coral: #e0806e;      /* off pitch, errors */
+  --green: #5fd08e;      /* tuner: in tune */
   --display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
   --body: 'Instrument Sans', system-ui, -apple-system, sans-serif;
   color-scheme: dark;
@@ -25,6 +26,9 @@ code { font-size: .9em; color: var(--text); }
 .status { margin: 0; color: var(--muted); display: flex; align-items: center; gap: 8px; flex: 1; font-size: .9rem; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); display: inline-block; }
 .dot.live { background: var(--gold); box-shadow: 0 0 0 4px rgb(230 180 80 / .18); }
+.meter { width: 72px; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; display: inline-block; }
+.meter i { display: block; height: 100%; background: var(--muted); transition: width .12s linear; }
+.meter.open i { background: var(--gold); }
 .mock { margin-left: 8px; padding: 1px 8px; border: 1px dashed var(--muted); border-radius: 99px; font-size: .78rem; }
 .ghost { background: none; border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; font-size: .88rem; }
 
@@ -55,6 +59,7 @@ code { font-size: .9em; color: var(--text); }
   font: 400 clamp(4rem, 10vw, 8.5rem)/1 var(--display); font-variation-settings: 'opsz' 144;
   letter-spacing: -.03em; animation: land .28s ease-out;
 }
+.chord-name.notes-only { font-size: clamp(2rem, 6vw, 3.2rem); letter-spacing: .04em; }
 .notes { text-align: center; color: var(--muted); margin: 0; letter-spacing: .08em; }
 @keyframes land { from { opacity: .2; transform: translateY(6px); } }
 
@@ -71,9 +76,11 @@ code { font-size: .9em; color: var(--text); }
   border-radius: 8px; background: rgb(230 180 80 / .14); border: 1px solid rgb(230 180 80 / .4); }
 .strip span { text-align: center; padding: 10px 0; font: 600 1.15rem/1 var(--display); color: var(--muted); }
 .strip span.center { color: var(--text); }
-.strip.in-tune { background: var(--gold); border-color: var(--gold); }
+.strip.in-tune { background: var(--green); border-color: var(--green); }
 .strip.in-tune span { color: var(--night); }
 .strip.idle { opacity: .5; }
+.strip.held { opacity: .7; }
+.strip.held .needle { transition: none; }
 .needle { position: absolute; top: -4px; bottom: -4px; width: 3px; margin-left: -1.5px; border-radius: 2px;
   background: var(--coral); transition: left .08s linear; }
 .strip.in-tune .needle { background: var(--night); }
