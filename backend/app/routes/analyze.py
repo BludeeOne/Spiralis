@@ -68,6 +68,7 @@ router = APIRouter(prefix="/api")
 
 BRIDGE = [
     "identify_chord",
+    "identify_chord_chroma",
     "estimate_key",
     "roman_numeral",
     "suggest_next",
@@ -151,20 +152,20 @@ def analyze(audio: UploadFile = File(...), history: str = Form("[]")):
         except RuntimeError as e:
             raise HTTPException(400, f"Could not decode audio: {e}") from e
 
-    #one pitch-class set for the whole chunk: average the chroma of
-    #the frames where the detector found active pitch classes
+    # one pitch-class set for the whole chunk
+    # average the chroma of frames where the detector found active pitch classes
     sounding = [
-        frame for frame in feats["frames"]
-        if frame["pitch_classes"]
+    frame for frame in feats["frames"]
+    if frame["pitch_classes"]
     ]
 
-    pcs = (
-        active_pitch_classes(
-            np.mean([frame["chroma"] for frame in sounding], axis=0)
-        )
-        if sounding
-        else []
+    chroma = (
+    np.mean([frame["chroma"] for frame in sounding], axis=0)
+    if sounding
+    else None
     )
+
+    pcs = active_pitch_classes(chroma) if chroma is not None else []
 
     basses = [frame["bass"] for frame in sounding if frame.get("bass") is not None]
     bass = max(set(basses), key=basses.count) if basses else None
@@ -176,15 +177,15 @@ def analyze(audio: UploadFile = File(...), history: str = Form("[]")):
 
     chord = None
 
-    if pcs:
-        found = _call("identify_chord", pending, pcs, bass)
+    if chroma is not None:
+        found = _call("identify_chord_chroma", pending, chroma, bass)
 
         if found:
             chord = {
                 "name": found["name"],
                 "root": found["root"],
                 "suffix": found.get("suffix", ""),
-                "pcs": pcs,
+                "pcs": found["pcs"],
             }
 
             last = hist[-1] if hist else None
@@ -199,12 +200,12 @@ def analyze(audio: UploadFile = File(...), history: str = Form("[]")):
                     *hist,
                     {
                         "name": chord["name"],
-                        "pcs": pcs,
+                        "pcs": chord["pcs"],
                         "root": chord["root"],
                         "suffix": chord.get("suffix", ""),
                     },
                 ][-MAX_HISTORY:]
-
+                
     key = (
         _call(
             "estimate_key",
