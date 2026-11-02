@@ -30,6 +30,8 @@ In this file
   - identify(pcs) -> best (root, quality) with a score
   - chord -> pitch classes for display / fingerings
 """
+import math
+
 from .notes import name_of
 
 #Intervals above the root for each chord type so it just do the math to find the right notes
@@ -108,6 +110,69 @@ def identify(pcs: list[int], bass: int | None = None) -> tuple[int, str] | None:
                 best_score = score
 
     return best
+
+
+# ---- chroma template matching ----
+# match the chroma against what each chord should sound like
+# including the overtones that naturally come from guitar strings
+# this avoids having to decide which notes are real and which are ghost notes
+# since those overtones are part of the template, they help identify the chord
+
+# tuned using tests/chord_report.py on real recordings
+HARMONICS = 8
+HARMONIC_DECAY = 0.75
+EXTRA_TONE_COST = 0.03
+BASS_BONUS = 0.03
+
+# where each overtone lands in semitones above the original note
+# k=1 is the note, 2 is an octave, 3 is an octave and fifth, etc
+_OVERTONE_STEPS = [round(12 * math.log2(k)) % 12 for k in range(1, HARMONICS + 1)]
+
+
+def _template(root: int, suffix: str) -> list[float]:
+    """build the expected chroma for a chord including its overtones"""
+    t = [0.0] * 12
+
+    for interval in CHORD_TYPES[suffix]:
+        note = (root + interval) % 12
+
+        for k, step in enumerate(_OVERTONE_STEPS):
+            t[(note + step) % 12] += HARMONIC_DECAY ** k
+
+    return t
+
+
+def _cosine(a, b) -> float:
+    """compare two chroma arrays without considering overall volume"""
+    dot = sum(x * y for x, y in zip(a, b))
+    na = sum(x * x for x in a) ** 0.5
+    nb = sum(y * y for y in b) ** 0.5
+
+    return dot / (na * nb) if na and nb else 0.0
+
+
+# build all chord templates once
+_TEMPLATES = {(r, s): _template(r, s) for r in range(12) for s in CHORD_TYPES}
+
+
+def identify_chroma(chroma, bass: int | None = None) -> tuple[int, str, float] | None:
+    """find the closest matching chord from a 12-bin chroma array"""
+    if chroma is None or len(chroma) != 12 or max(chroma) <= 0:
+        return None
+
+    best, best_score = None, float("-inf")
+
+    for (root, suffix), template in _TEMPLATES.items():
+        score = _cosine(chroma, template)
+        score -= EXTRA_TONE_COST * (len(CHORD_TYPES[suffix]) - 3)
+
+        if bass is not None and bass % 12 == root:
+            score += BASS_BONUS
+
+        if score > best_score:
+            best, best_score = (root, suffix), score
+
+    return (*best, best_score)
 
 
 def chord_name(root: int, suffix: str, flats: bool = False) -> str:
