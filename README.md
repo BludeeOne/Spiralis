@@ -47,10 +47,6 @@ npm run dev
 
 Then open **http://localhost:5173**.
 
-> [!NOTE]
-> Start the backend first. Vite proxies `/api` requests to it, so the frontend has nothing to talk to otherwise.
->
-> The browser needs microphone access. It doesn't always ask right away, but pressing **Play** triggers the permission prompt.
 
 ---
 
