@@ -2,6 +2,7 @@ annotated-doc==0.0.5
 annotated-types==0.8.0
 anyio==4.15.1
 attrs==26.1.0
+bcrypt==5.0.0
 audioread==3.1.0
 basic-pitch==0.4.0
 cattrs==26.2.1
@@ -48,6 +49,7 @@ scipy==1.17.1
 six==1.17.0
 soundfile==0.14.0
 soxr==1.1.0
+SQLAlchemy==2.1.8
 starlette==1.7.0
 sympy==1.14.0
 threadpoolctl==3.7.0
