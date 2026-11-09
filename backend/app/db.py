@@ -1,26 +1,24 @@
 """
-db.py — where Spiralis keeps things between visits
+db.py — im gonna make this the database file for spiralis
 
-Everything before this lived in React state and disappeared on refresh. This
-file sets up a small SQLite database so users and their saved songs stick
-around.
+This file sets up the SQLite database used to store users and their
+saved songs. Instead of keeping everything in React state, the database
+lets that information stick around between visits.
 
-WHY SQLITE
-  - It's a single file (backend/spiralis.db), no server to install or run
-  - Python ships with it, SQLAlchemy talks to it
-  - Plenty for a capstone. If Spiralis ever goes live for real, set
-    SPIRALIS_DB_URL to a Postgres URL and nothing else in the app changes
+SQLite works well here because it runs locally in a single file and
+doesn't need a separate server. 
 
-THE PIECES
-  engine       the connection to the database file
-  Base         every table class in models.py inherits from this
-  get_db()     FastAPI dependency: opens a session per request, always closes it
-  init_db()    creates any tables that don't exist yet, called on startup
+The main pieces are:
 
-Tables are created with create_all(), which only ADDS missing tables. It does
-not change a table that already exists. If a column changes during
-development, delete backend/spiralis.db and restart (or add Alembic later).
+    engine       handles the connection to the database
+    Base         parent class for the tables defined in models.py
+    get_db()     opens a database session for each request and closes it
+    init_db()    creates the tables when the application starts
+
+create_all() only creates tables that don't already exist. It won't
+update existing tables if we change their structure. 
 """
+
 import os
 from collections.abc import Iterator
 from pathlib import Path
@@ -28,15 +26,21 @@ from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
+
 DEFAULT_PATH = Path(__file__).resolve().parent.parent / "spiralis.db"
 DATABASE_URL = os.getenv("SPIRALIS_DB_URL", f"sqlite:///{DEFAULT_PATH}")
 
-#sqlite only lets the thread that opened a connection use it by default,
-#FastAPI runs plain `def` routes in a threadpool so that check has to go
+# sqlite normally limits connections to the thread that created them
+# fastapi can run sync routes in a threadpool, so disable the check
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
 engine = create_engine(DATABASE_URL, connect_args=connect_args)
-SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+
+SessionLocal = sessionmaker(
+    bind=engine,
+    autoflush=False,
+    expire_on_commit=False
+)
 
 
 class Base(DeclarativeBase):
@@ -45,6 +49,7 @@ class Base(DeclarativeBase):
 
 def get_db() -> Iterator[Session]:
     db = SessionLocal()
+
     try:
         yield db
     finally:
@@ -52,6 +57,7 @@ def get_db() -> Iterator[Session]:
 
 
 def init_db() -> None:
-    from app import models  # noqa: F401  (importing registers the tables on Base)
+    # importing models registers their tables with Base
+    from app import models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
