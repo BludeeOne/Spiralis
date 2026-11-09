@@ -28,6 +28,24 @@ const ABS_FLOOR = 1e-4  // minimum signal level needed to open the gate
 const TARGET_PEAK = 0.5 // target peak when normalizing audio
 const MAX_GAIN = 40     // maximum gain to avoid boosting too much background noise
 
+// strum (attack) detection
+const FAST_MS = 10         // short envelope: reacts to the pick hitting the strings
+const SLOW_MS = 300        // long envelope: the "what's been ringing" average
+const ONSET_DB = 6         // fast must jump this far above slow to count as a strum
+const REFRACTORY_MS = 150  // ignore new strums this soon after one (pick + string rattle)
+const SKIP_MS = 40         // pick noise right after the attack; smears every chroma bin
+const STRUM_MS = 450       // how much ringing chord to send after skipping the pick noise
+const MIN_STRUM_MS = 150   // a strum cut shorter than this by the next one is dropped
+const STRONG_DB = 6        // within this of the loudest recent strum = a strong strum
+const LOUD_DECAY_DB = 3    // per second; lets "loudest recent" drift down if you play softer
+const BPM_STRUMS = 9       // strong strums kept for the tempo estimate
+
+export type ChunkInfo =
+  | { kind: 'listen' }
+  | { kind: 'strum'; db: number; strong: boolean }
+
+export interface Strum { db: number; strong: boolean; at: number }
+
 // calculates the root mean square of an audio buffer
 const rmsOf = (x: Float32Array) => {
   let sum = 0
@@ -39,9 +57,51 @@ const rmsOf = (x: Float32Array) => {
   return Math.sqrt(sum / x.length)
 }
 
-// opens the mic and sends audio windows to the tuner
+const toDb = (x: number) => 20 * Math.log10(Math.max(x, 1e-6))
+
+// boosts a quiet window up to TARGET_PEAK (in place), capped at MAX_GAIN
+function normalize(win: Float32Array) {
+  let peak = 0
+
+  for (let i = 0; i < win.length; i++) {
+    peak = Math.max(peak, Math.abs(win[i]))
+  }
+
+  const gain = Math.min(MAX_GAIN, TARGET_PEAK / Math.max(peak, 1e-6))
+
+  if (gain > 1) {
+    for (let i = 0; i < win.length; i++) {
+      win[i] *= gain
+    }
+  }
+}
+
+// median of strong-strum gaps -> BPM, folded into 60–180 so a strum every
+// other beat (or every half beat) still lands on a sensible tempo
+function tempoFrom(times: number[]): number | null {
+  const gaps: number[] = []
+
+  for (let i = 1; i < times.length; i++) {
+    const gap = times[i] - times[i - 1]
+    if (gap >= 0.2 && gap <= 2.5) gaps.push(gap) // longer = you paused, not a beat
+  }
+
+  if (gaps.length < 3) return null
+
+  gaps.sort((a, b) => a - b)
+  let bpm = 60 / gaps[Math.floor(gaps.length / 2)]
+
+  while (bpm < 60) bpm *= 2
+  while (bpm > 180) bpm /= 2
+
+  return Math.round(bpm)
+}
+
+// opens the mic, feeds the tuner, and sends two kinds of chunks:
+//   'listen' — sliding window every hopSec (the "thinking" feed)
+//   'strum'  — the ringing chord right after each detected attack
 export function useMic(
-  onChunk: (wav: Blob) => void,
+  onChunk: (wav: Blob, info: ChunkInfo) => void,
   windowSec = 1.5,
   hopSec = 0.5
 ) {
@@ -52,6 +112,8 @@ export function useMic(
     db: -Infinity,
     open: false,
   })
+  const [lastStrum, setLastStrum] = useState<Strum | null>(null)
+  const [bpm, setBpm] = useState<number | null>(null)
 
   const ctxRef = useRef<AudioContext | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -69,6 +131,8 @@ export function useMic(
     setAnalyser(null)
     setListening(false)
     setLevel({ db: -Infinity, open: false })
+    setLastStrum(null)
+    setBpm(null)
   }, [])
 
   const start = useCallback(async () => {
@@ -118,11 +182,56 @@ export function useMic(
       let write = 0
       let filled = 0
       let sinceHop = 0
+      let total = 0 // samples received since start; write === total % size
 
       // keeps recent audio levels to estimate background noise
       const recent: number[] = []
       const floorHops = Math.ceil(FLOOR_SEC / hopSec)
       const gate = Math.pow(10, GATE_DB / 20)
+      let floor = FLOOR_CAP // updated every hop; strums must clear it too
+
+      // strum detection state
+      const sr = ctx.sampleRate
+      const ms = (n: number) => Math.round((n / 1000) * sr)
+      const onsetRatio = Math.pow(10, ONSET_DB / 20)
+      let fast = 0
+      let slow = 0
+      let prev = 0 // last sample of the previous block, for the difference signal
+      let lastOnset = -Infinity  // sample position of the last strum
+      let captureFrom = -1       // where the pending strum window starts (-1 = none)
+      let strumPeak = 0          // loudest fast-envelope value during this strum's attack
+      let loudest = -Infinity    // loudest recent strum, in dB
+      let loudestAt = 0
+      const strongTimes: number[] = []
+
+      // copies samples [from, to) out of the ring buffer, chronologically
+      const slice = (from: number, to: number) => {
+        const out = new Float32Array(to - from)
+        for (let i = 0; i < out.length; i++) out[i] = ring[(from + i) % size]
+        return out
+      }
+
+      // sends the pending strum window (ending at `end`) and decides if it was strong
+      const emitStrum = (end: number) => {
+        const win = slice(captureFrom, end)
+        const db = toDb(strumPeak)
+        const at = lastOnset / sr
+
+        loudest = Math.max(db, loudest - LOUD_DECAY_DB * (at - loudestAt))
+        loudestAt = at
+        const strong = db >= loudest - STRONG_DB
+
+        if (strong) {
+          strongTimes.push(at)
+          if (strongTimes.length > BPM_STRUMS) strongTimes.shift()
+          setBpm(tempoFrom(strongTimes))
+        }
+
+        captureFrom = -1
+        normalize(win)
+        setLastStrum({ db, strong, at })
+        onChunkRef.current(encodeWav(win, sr), { kind: 'strum', db, strong })
+      }
 
       tap.port.onmessage = (e: MessageEvent<Float32Array>) => {
         const block = e.data
@@ -135,7 +244,47 @@ export function useMic(
 
         filled = Math.min(size, filled + block.length)
         sinceHop += block.length
+        total += block.length
 
+        // ---- strum detection, every block (~3 ms) ----
+        // works on the sample-to-sample difference, not the raw signal: the pick's
+        // click is broadband and jumps a lot, while strings still ringing from the
+        // last strum are low and smooth and barely register. Raw loudness only
+        // rises a few dB when you strum over ringing strings; the difference rises far more
+        let d = 0
+        for (let i = 0; i < block.length; i++) {
+          const diff = block[i] - prev
+          d += diff * diff
+          prev = block[i]
+        }
+        const r = Math.sqrt(d / block.length)
+
+        // two envelopes of that signal: fast jumps on the attack, slow lags
+        // behind, so fast/slow spikes exactly when a new strum hits
+        fast += (r - fast) * (1 - Math.exp(-block.length / ms(FAST_MS)))
+        slow += (r - slow) * (1 - Math.exp(-block.length / ms(SLOW_MS)))
+
+        // strum loudness = peak of the attack (the pick click), measured
+        // during the skipped pick-noise window. Relative only: used to compare strums
+        if (captureFrom >= 0 && total < captureFrom) strumPeak = Math.max(strumPeak, fast)
+
+        const isOnset =
+          fast > slow * onsetRatio &&
+          rmsOf(block) > Math.max(ABS_FLOOR, floor * gate) && // real sound, not hiss
+          total - lastOnset > ms(REFRACTORY_MS)
+
+        if (isOnset) {
+          // a new strum cut the previous one short: send it if it's long enough
+          if (captureFrom >= 0 && total - captureFrom >= ms(MIN_STRUM_MS)) emitStrum(total)
+
+          lastOnset = total
+          captureFrom = total + ms(SKIP_MS)
+          strumPeak = fast
+        } else if (captureFrom >= 0 && total >= captureFrom + ms(STRUM_MS)) {
+          emitStrum(captureFrom + ms(STRUM_MS))
+        }
+
+        // ---- sliding 'listen' window, every hopSec ----
         if (sinceHop < hop || filled < size) return
 
         sinceHop = 0
@@ -146,42 +295,21 @@ export function useMic(
         win.set(ring.subarray(0, write), size - write)
 
         // estimates the noise floor using the quietest recent audio
-        const r = rmsOf(win.subarray(size - hop))
+        const hopRms = rmsOf(win.subarray(size - hop))
 
-        recent.push(r)
+        recent.push(hopRms)
         if (recent.length > floorHops) recent.shift()
 
-        const floor = Math.min(FLOOR_CAP, ...recent)
+        floor = Math.min(FLOOR_CAP, ...recent)
         const open = rmsOf(win) > Math.max(ABS_FLOOR, floor * gate)
 
-        setLevel({
-          db: 20 * Math.log10(Math.max(r, 1e-6)),
-          open,
-        })
+        setLevel({ db: toDb(hopRms), open })
 
         if (!open) return
 
-        // finds the loudest sample and calculates the needed gain
-        let peak = 0
-
-        for (let i = 0; i < size; i++) {
-          peak = Math.max(peak, Math.abs(win[i]))
-        }
-
-        const gain = Math.min(
-          MAX_GAIN,
-          TARGET_PEAK / Math.max(peak, 1e-6)
-        )
-
-        // boosts quiet audio without exceeding the gain limit
-        if (gain > 1) {
-          for (let i = 0; i < size; i++) {
-            win[i] *= gain
-          }
-        }
-
-        // encodes the audio window and sends it to the callback
-        onChunkRef.current(encodeWav(win, ctx.sampleRate))
+        // boosts quiet audio, encodes it, and sends it as a 'listen' chunk
+        normalize(win)
+        onChunkRef.current(encodeWav(win, sr), { kind: 'listen' })
       }
 
       setAnalyser(an)
@@ -194,5 +322,5 @@ export function useMic(
 
   useEffect(() => stop, [stop])
 
-  return { listening, error, analyser, level, start, stop }
+  return { listening, error, analyser, level, lastStrum, bpm, start, stop }
 }

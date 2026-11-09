@@ -59,6 +59,21 @@ def identify_chord(pcs, bass=None):
         "name": chords.chord_name(root, suffix),
     }
 
+def identify_chord_chroma(chroma, bass=None):
+    """identify a chord using chroma template matching"""
+    result = chords.identify_chroma(chroma, bass)
+
+    if result is None:
+        return None
+
+    root, suffix, score = result
+    return {
+        "root": root,
+        "suffix": suffix,
+        "name": chords.chord_name(root, suffix),
+        "pcs": sorted(chords.build(root, suffix)),
+    }
+
 
 def estimate_key(chord_sets):
     """rstimate the key from the detected chord history"""
