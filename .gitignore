@@ -9,3 +9,15 @@ frontend/node_modules/
 # macOS
 .DS_Store
 
+backend/.venv/
+.venv/
+
+# Local database (users, saved songs) — never commit real accounts
+backend/*.db
+backend/*.db-journal
+
+# Build output
+frontend/dist/
+
+# Python test cache
+.pytest_cache/
