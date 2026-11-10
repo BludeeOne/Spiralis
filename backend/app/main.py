@@ -19,9 +19,13 @@ from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import theory_bridge
-from app.db import init_db
+from app.database.connection_to_db import init_db
 from app.audio.detection import extract_features
 from app.schemas import AnalysisResponse, AudioFeatures, TheoryResult, WrittenInput
+
+from app.routes.analyze import router as analyze_router
+from app.routes.auth import router as auth_router  # noqa: E402
+
 
 ALLOWED_EXTENSIONS = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".webm"}
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024
@@ -40,6 +44,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(analyze_router)
+app.include_router(auth_router)
 
 
 @app.get("/health")
