@@ -58,6 +58,6 @@ def get_db() -> Iterator[Session]:
 
 def init_db() -> None:
     # importing models registers their tables with Base
-    from app import models  # noqa: F401
+    from app.database import models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
