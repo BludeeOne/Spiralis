@@ -55,6 +55,7 @@ returned as a 400 response with a readable `detail` message.
 This keeps one bad audio chunk from crashing the entire server
 
 """
+from ast import arguments
 import json
 import tempfile
 
@@ -62,6 +63,7 @@ import numpy as np
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from app import theory_bridge
+from theory import scales
 from app.audio.detection import active_pitch_classes, extract_features
 
 router = APIRouter(prefix="/api")
@@ -265,3 +267,14 @@ def analyze(audio: UploadFile = File(...), history: str = Form("[]")):
         "bpm": feats["bpm"] or None,
         "pending": pending,
     }
+
+@router.get("/scale")
+def scale(root: int, mode: str):
+    """return the scale notes for a given root and mode"""
+    if mode not in scales.SCALE_INTERVALS:
+        raise HTTPException(422, f"Invalid mode: {mode}")
+    
+    pcs = scales.get_scale(root, mode) #pitch classes
+    strings = theory_bridge.scale_positions(root, mode)
+    
+    return {"root": root, "mode": mode, "pcs": pcs, "strings": strings}
