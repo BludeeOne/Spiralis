@@ -15,6 +15,18 @@ export interface ChordInfo {
   pcs: PitchClass[]
 }
 
+export interface StringPositions {
+  string: number //key "string" strings are 0-5
+  frets: number[] //list of numbers
+}
+
+export interface ScaleResponse {
+  root: PitchClass
+  mode: string
+  pcs: PitchClass[]
+  strings: StringPositions[]
+}
+
 export interface KeyInfo {
   name: string // "C major"
   relative: string | null // "A minor"
@@ -24,6 +36,7 @@ export interface Numbered {
   name: string // "G7"
   numeral: string | null // "V7"
 }
+
 
 export interface AnalyzeResponse {
   notes: string[] // spelled names of what's sounding now
